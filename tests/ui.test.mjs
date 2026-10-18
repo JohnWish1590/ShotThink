@@ -26,18 +26,21 @@ const background = await read('src/background.js');
 /* ---------------------------------------------------------------- helpers */
 
 const results = [];
+const pendingTests = [];
 function test(name, fn) {
-  try {
-    fn();
-    results.push({ name, ok: true });
-  } catch (error) {
-    results.push({ name, ok: false, error });
-  }
+  pendingTests.push((async () => {
+    try {
+      await fn();
+      results.push({ name, ok: true });
+    } catch (error) {
+      results.push({ name, ok: false, error });
+    }
+  })());
 }
 
-/** Every `--st-scale` multiplier applied to a pixel value in the stylesheet. */
+/** Every dimension driven by --st-scale in the stylesheet. */
 function scaledValues(source) {
-  return [...source.matchAll(/calc\((\d+)px\s*\*\s*var\(--st-scale\)\)/g)].map(m => Number(m[1]));
+  return [...source.matchAll(/calc\(var\(--st-scale\)\s*\*\s*([\d.]+)px\)/g)].map(m => Number(m[1]));
 }
 
 /**
@@ -130,20 +133,34 @@ test('the scale factor reproduces Mouse4 proportions', () => {
   assert.equal(buttonPx, 31, 'known good value on every DPR tested');
 });
 
-test('the button base value matches Mouse4 source', () => {
-  // Mouse4/ui/toolbar.py: side = round(46 * scale)
+test('--st-scale carries the button edge length directly', () => {
+  // The setting is a pixel value (26 / 28 / 31), so the variable is that number
+  // and the button multiplies by 1px. This keeps one setting driving every
+  // other dimension as a fraction of it.
   const block = overlay.slice(overlay.indexOf('.st-toolbar button {'));
-  const width = block.match(/width:\s*calc\((\d+)px\s*\*\s*var\(--st-scale\)\)/);
+  const width = block.match(/width:\s*calc\(var\(--st-scale\)\s*\*\s*([\d.]+)px\)/);
   assert.ok(width, 'button width must use the scale variable');
-  assert.equal(Number(width[1]), 46, 'base must be Mouse4\'s 46, not an arbitrary 42');
+  assert.equal(Number(width[1]), 1, 'button width must equal --st-scale exactly');
+  assert.match(overlay, /setProperty\('--st-scale',\s*String\(buttonPx\)\)/);
 });
 
-test('the icon base value matches Mouse4 source', () => {
-  // Mouse4/ui/toolbar.py: icon_side = round(24 * scale)
+test('the icon keeps Mouse4 proportion of the button', () => {
+  // Mouse4/ui/toolbar.py: side = round(46 * scale), icon_side = round(24 * scale)
   const block = overlay.slice(overlay.indexOf('.st-toolbar svg'));
-  const width = block.match(/width:\s*calc\((\d+)px\s*\*\s*var\(--st-scale\)\)/);
+  const width = block.match(/width:\s*calc\(var\(--st-scale\)\s*\*\s*([\d.]+)px\)/);
   assert.ok(width, 'icon size must use the scale variable');
-  assert.equal(Number(width[1]), 24);
+  const ratio = Number(width[1]);
+  assert.ok(Math.abs(ratio - 24 / 46) < 0.01, `icon ratio should be 24/46, saw ${ratio}`);
+});
+
+test('the default toolbar size is the 28px the user asked for', () => {
+  assert.match(overlay, /const DEFAULT_BUTTON_PX = 28/);
+});
+
+test('toolbar size options are 26 / 28 / 31', async () => {
+  const html = await read('ui/options.html');
+  const values = [...html.matchAll(/data-scale="(\d+)"/g)].map(m => Number(m[1]));
+  assert.deepEqual(values, [26, 28, 31]);
 });
 
 /* --------------------------------------------------------- shortcut bugs */
@@ -221,7 +238,51 @@ test('a missing activeTab grant is not reported as an uncapturable page', () => 
   assert.match(background, /刷新/);
 });
 
+/* ------------------------------------------------------- language / theme */
+
+test('language defaults to the browser locale', async () => {
+  // Requirement: a Chinese browser shows Chinese, anything else shows English,
+  // but the user can override either way.
+  assert.match(background, /shotThinkLang/);
+  const i18n = await read('src/i18n.js');
+  assert.match(i18n, /getUILanguage/, 'must read the browser language');
+  assert.match(i18n, /shotThinkSetLanguage/, 'must allow an explicit override');
+});
+
+test('both extension pages offer a language switch', async () => {
+  for (const page of ['ui/options.html', 'ui/diagnose.html']) {
+    const html = await read(page);
+    assert.match(html, /data-lang="zh"/, `${page} needs a Chinese option`);
+    assert.match(html, /data-lang="en"/, `${page} needs an English option`);
+  }
+});
+
+test('both extension pages offer a theme switch', async () => {
+  for (const page of ['ui/options.html', 'ui/diagnose.html']) {
+    const html = await read(page);
+    assert.match(html, /data-theme-opt="light"/, `${page} needs light`);
+    assert.match(html, /data-theme-opt="dark"/, `${page} needs dark`);
+    assert.match(html, /data-theme-opt="system"/, `${page} needs follow-system`);
+  }
+});
+
+test('the stylesheet defines both themes', async () => {
+  const css = await read('ui/base.css');
+  assert.match(css, /:root\[data-theme="light"\]/, 'light theme tokens are required');
+  assert.match(css, /--bg:/, 'shared tokens are required');
+});
+
+test('the language switch itself is not translated', async () => {
+  // data-no-i18n keeps "中文" readable when the UI is in English.
+  for (const page of ['ui/options.html', 'ui/diagnose.html']) {
+    const html = await read(page);
+    assert.match(html, /data-no-i18n/, `${page} must protect the language switch`);
+  }
+});
+
 /* ---------------------------------------------------------------- report */
+
+await Promise.all(pendingTests);
 
 const failed = results.filter(r => !r.ok);
 for (const result of results) {

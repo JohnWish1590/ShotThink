@@ -137,6 +137,14 @@ async function startCapture(tabId, tabUrl) {
     } catch {}
   }
 
+  // The extension's own pages can never be scripted. Check this before the
+  // generic restricted-URL branch, which also matches chrome-extension:, so the
+  // user gets the specific reason instead of "this page cannot be captured".
+  if (/^chrome-extension:\/\//i.test(url || '')) {
+    await reportCaptureFailure(tabId, shotThinkText('扩展自身的页面无法截图。请切换到普通网页后再试。'));
+    return;
+  }
+
   if (isRestrictedUrl(url)) {
     await reportCaptureFailure(tabId, shotThinkText('此页面无法截图。'));
     return;
@@ -317,11 +325,23 @@ onWorkerStart();
 
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   const run = async () => {
-    /* The overlay asks for the frozen viewport bitmap it will paint on. */
+    /* The overlay asks for the frozen viewport bitmap it will paint on.
+       UI preferences ride along so the overlay does not need its own storage
+       access, which it cannot have from the page context. */
     if (message.type === 'captureFrame' && sender.tab?.id) {
       const windowId = message.windowId ?? sender.tab.windowId;
       const frame = await captureFrameForOverlay(sender.tab.id, windowId);
-      return { ok: true, ...frame };
+      const { uiLanguage = '', toolbarScale = 28 } = await chrome.storage.local.get([
+        'uiLanguage', 'toolbarScale'
+      ]);
+      return {
+        ok: true,
+        ...frame,
+        prefs: {
+          language: uiLanguage === 'en' || uiLanguage === 'zh' ? uiLanguage : shotThinkLang,
+          toolbarScale
+        }
+      };
     }
 
     /* Long capture: scroll, sample, and hand the slices back to the overlay. */

@@ -1,0 +1,230 @@
+/* ShotThink shared UI: theme tokens, layout, and the component set used by the
+ * options and diagnostics pages.
+ *
+ * Themes are driven by `data-theme` on <html>, resolved in JS from the stored
+ * preference. "system" is resolved to light or dark before this applies, so the
+ * stylesheet only ever needs two states.
+ */
+
+:root {
+  --bg: #18181b;
+  --panel: #232327;
+  --panel-2: rgba(255, 255, 255, .04);
+  --line: rgba(255, 255, 255, .12);
+  --text: #e5e5ea;
+  --muted: #9a9aa2;
+  --accent: #2997ff;
+  --accent-ink: #04121f;
+  --ok: #68dc8c;
+  --warn: #e4bd64;
+  --err: #d98585;
+  --seg-bg: rgba(255, 255, 255, .07);
+  --seg-active: rgba(255, 255, 255, .15);
+  --seg-shadow: none;
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --panel-2: rgba(0, 0, 0, .03);
+  --line: rgba(0, 0, 0, .10);
+  --text: #1c1c1e;
+  --muted: #6b6b73;
+  --accent: #0a84ff;
+  --accent-ink: #ffffff;
+  --ok: #12894a;
+  --warn: #8a6100;
+  --err: #c0392b;
+  --seg-bg: #e8ebf1;
+  --seg-active: #ffffff;
+  --seg-shadow: 0 1px 3px rgba(0, 0, 0, .14);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 28px 20px 60px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.65 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+main { max-width: 760px; margin: 0 auto; }
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+header img { width: 40px; height: 40px; }
+h1 { margin: 0; font-size: 19px; font-weight: 600; }
+.header-tools { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.intro { margin: 0 0 18px; color: var(--muted); }
+.intro kbd {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.row:last-child { border-bottom: none; }
+.row .k { color: var(--muted); min-width: 170px; flex-shrink: 0; }
+.row .v { margin-left: auto; text-align: right; word-break: break-all; }
+.row a.v { color: var(--accent); text-decoration: none; }
+
+textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+textarea:focus { outline: none; border-color: var(--accent); }
+
+button {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+button.quiet { background: transparent; }
+button:disabled { opacity: .5; cursor: default; }
+
+.actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.status { color: var(--muted); font-size: 13px; }
+
+/* Segmented control: the language / theme switch from the reference design. */
+.seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--seg-bg);
+  border-radius: 999px;
+}
+.seg button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 5px 13px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  cursor: pointer;
+}
+.seg button:hover { background: transparent; color: var(--text); }
+.seg button[aria-pressed="true"] {
+  background: var(--seg-active);
+  color: var(--text);
+  box-shadow: var(--seg-shadow);
+  font-weight: 600;
+}
+.seg svg { width: 16px; height: 16px; display: block; }
+
+/* Send history. Each row wraps onto extra lines instead of squeezing the
+   "open chat" link into a one-character-wide column. */
+.jobs { list-style: none; margin: 0; padding: 0; }
+.job {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.job:last-child { border-bottom: none; }
+.job-name { word-break: break-all; }
+.job-state { color: var(--muted); white-space: nowrap; font-size: 12px; }
+.job-state.ok { color: var(--ok); }
+.job-state.warn { color: var(--warn); }
+.job-state.err { color: var(--err); }
+.job-link { color: var(--accent); text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+.job-note { flex-basis: 100%; font-size: 12px; color: var(--warn); }
+.job-note.err { color: var(--err); }
+
+small { display: block; margin-top: 10px; color: var(--muted); font-size: 12px; }
+code {
+  background: var(--panel-2);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.verdict {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.verdict.ok { border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.verdict.warn { border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.verdict.err { border-color: color-mix(in srgb, var(--err) 45%, transparent); }
+
+ol { margin: 10px 0 0; padding-left: 20px; color: var(--muted); font-size: 13px; }
+li { margin-bottom: 6px; }

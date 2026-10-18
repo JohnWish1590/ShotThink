@@ -4,6 +4,42 @@ All notable changes to ShotThink. The version here must match
 `manifest.json`; Chrome only reloads an unpacked extension's code when that
 number changes, so every user-visible fix bumps it.
 
+## [0.3.0] - 2026-10-18
+
+### Added
+
+- **Language switch.** Chinese and English, with the browser language as the
+default and an explicit override stored as `uiLanguage`. Both extension pages
+share the switch via `ui/prefs.js`; the language buttons themselves are marked
+`data-no-i18n` so "中文" stays readable in English mode.
+- **Theme switch.** Light, dark, and follow-system. Tokens live in
+`ui/base.css` under `:root` and `:root[data-theme="light"]`; `system` is
+resolved in JS against `prefers-color-scheme` with a live listener.
+- **Toolbar size setting.** 26 / 28 / 31 px, defaulting to 28. `--st-scale` now
+carries the button edge length directly, so every other dimension is a
+fraction of it and one setting drives the whole toolbar. Verified: 26→26px,
+28→28px, 31→31px, icon always 52% of the button.
+
+### Fixed
+
+- **The send-history row was unreadable.** The "open chat" link sat in the same
+flex container as the filename, so it collapsed into a one-character-wide
+column (see the 0.2.0 screenshot). Job rows are now wrapping block children and
+the link never shrinks.
+- **The options page still advertised `Ctrl+Shift+S`** in its intro text after
+the shortcut moved to `Alt+Shift+S`.
+- **Extension pages reported the wrong reason.** Clicking the icon on
+`chrome-extension://…/options.html` said "this page cannot be captured". It now
+says the extension's own pages cannot be captured, which is the actual rule.
+- **Translated paragraphs containing inline markup were skipped.** The intro
+sentence has a `<kbd>` inside it, so the text walker never matched it. Partial
+strings are now in the translation table and each text node is matched alone.
+
+### Changed
+
+- Options and diagnostics share `ui/base.css` and `ui/prefs.js` instead of
+duplicating their theme and language logic.
+
 ## [0.2.0] - 2026-10-18
 
 ### Fixed

@@ -1,4 +1,8 @@
-/* ShotThink options page: analysis rules, send history, troubleshooting. */
+/* ShotThink options page: rules, send history, toolbar size.
+ *
+ * Language and theme are handled by prefs.js so both extension pages behave
+ * identically. This file owns everything specific to the options page.
+ */
 
 const $ = id => document.getElementById(id);
 
@@ -16,6 +20,27 @@ const isManualJob = job => ['failed', 'uncertain'].includes(job.status);
 
 let manualOnly = false;
 
+/* ---------------------------------------------------------- toolbar size */
+
+function paintScale(scale) {
+  for (const button of $('scaleSeg').querySelectorAll('[data-scale]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.scale === String(scale)));
+  }
+}
+
+async function loadScale() {
+  const { toolbarScale } = await chrome.storage.local.get('toolbarScale');
+  paintScale(toolbarScale ?? 28);
+}
+
+$('scaleSeg').addEventListener('click', async event => {
+  const button = event.target.closest('[data-scale]');
+  if (!button) return;
+  const scale = Number(button.dataset.scale);
+  await chrome.storage.local.set({ toolbarScale: scale });
+  paintScale(scale);
+});
+
 /* ------------------------------------------------------------------ rules */
 
 async function loadRules() {
@@ -30,21 +55,32 @@ async function saveRules() {
   setTimeout(() => { $('rulesStatus').textContent = ''; }, 1600);
 }
 
+$('save').addEventListener('click', () => void saveRules());
+
 /* ----------------------------------------------------------------- history */
 
+/**
+ * One job row.
+ *
+ * Built as wrapping block children rather than one flex line: the previous
+ * version put the "open chat" link in the same container, which squeezed it
+ * into a one-character-wide column on a narrow window.
+ */
 function jobRow(job) {
   const li = document.createElement('li');
+  li.className = 'job';
 
-  const label = document.createElement('span');
+  const name = document.createElement('span');
+  name.className = 'job-name';
   const parts = [];
   if (job.day) parts.push(`${job.day} · #${job.ordinal}`);
   parts.push(job.name || '');
-  label.textContent = parts.filter(Boolean).join(' · ');
-  li.append(label);
+  name.textContent = parts.filter(Boolean).join(' · ');
+  li.append(name);
 
   const state = document.createElement('span');
   const status = job.status;
-  state.className = 'state';
+  state.className = 'job-state';
   if (status === 'sent') state.classList.add('ok');
   else if (status === 'failed') state.classList.add('err');
   else if (status === 'uncertain') state.classList.add('warn');
@@ -57,18 +93,12 @@ function jobRow(job) {
 
   if (job.url) {
     const link = document.createElement('a');
-    link.textContent = shotThinkText(' 查看对话');
+    link.className = 'job-link';
+    link.textContent = shotThinkText('查看对话');
     link.href = job.url;
     link.target = '_blank';
     link.rel = 'noreferrer';
     li.append(link);
-  }
-
-  if (job.warning || job.error) {
-    const small = document.createElement('small');
-    small.className = job.error ? 'state err' : 'state warn';
-    small.textContent = job.warning || job.error;
-    li.append(small);
   }
 
   if (isManualJob(job)) {
@@ -88,7 +118,20 @@ function jobRow(job) {
     li.append(clear);
   }
 
+  if (job.warning || job.error) {
+    const note = document.createElement('span');
+    note.className = 'job-note' + (job.error ? ' err' : '');
+    note.textContent = job.warning || job.error;
+    li.append(note);
+  }
+
   return li;
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 async function render() {
@@ -111,8 +154,6 @@ async function render() {
 
   $('resume').hidden = !queuePaused;
 
-  // Images live in IndexedDB, which has no practical 10 MB ceiling. Show the
-  // real footprint so a growing backlog is visible before it becomes a problem.
   try {
     const usage = await chrome.runtime.sendMessage({ type: 'storageUsage' });
     if (usage?.ok) {
@@ -123,15 +164,7 @@ async function render() {
   } catch {}
 }
 
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
 /* --------------------------------------------------------------- actions */
-
-$('save').addEventListener('click', () => void saveRules());
 
 $('manual').addEventListener('click', () => {
   manualOnly = !manualOnly;
@@ -166,10 +199,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.jobs || changes.queuePaused)) void render();
 });
 
+// Re-render on language change so dynamically built rows follow.
+document.addEventListener('shotthink:language', () => void render());
+
 /* ------------------------------------------------------------------- boot */
 
 (async () => {
-  shotThinkLocalizePage();
+  $('version').textContent = `v${chrome.runtime.getManifest().version}`;
+  await shotThinkLoadPrefs();
+  await loadScale();
   await loadRules();
   await render();
 })();

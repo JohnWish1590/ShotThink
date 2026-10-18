@@ -1,8 +1,8 @@
 /* ShotThink diagnostics page.
  *
- * Answers the question "why did nothing happen when I clicked the icon?"
- * without requiring the user to open devtools. Everything here reads only the
- * extension's own state and the current tab's URL, never page content.
+ * Answers "why did nothing happen when I clicked the icon?" without requiring
+ * devtools. Everything here reads only the extension's own state and the
+ * current tab's URL, never page content.
  */
 
 const $ = id => document.getElementById(id);
@@ -12,11 +12,29 @@ function row(label, value, state) {
   div.className = 'row';
   const k = document.createElement('span');
   k.className = 'k';
-  k.textContent = label;
+  k.textContent = shotThinkText(label);
   const v = document.createElement('span');
   v.className = 'v' + (state ? ` ${state}` : '');
   v.textContent = value;
   div.append(k, v);
+  return div;
+}
+
+function linkRow(label, href, text) {
+  const div = document.createElement('div');
+  div.className = 'row';
+  const k = document.createElement('span');
+  k.className = 'k';
+  k.textContent = shotThinkText(label);
+  const a = document.createElement('a');
+  a.className = 'v';
+  a.href = '#';
+  a.textContent = text;
+  a.addEventListener('click', event => {
+    event.preventDefault();
+    void chrome.tabs.create({ url: href });
+  });
+  div.append(k, a);
   return div;
 }
 
@@ -35,15 +53,14 @@ async function render() {
   const checks = $('checks');
   checks.replaceChildren();
 
-  // Version first, so a reload that did not pick up new code is obvious.
   const version = chrome.runtime.getManifest().version;
   $('version').textContent = `v${version}`;
 
-  // 1. Manifest / worker alive. If this page rendered, the worker answered.
   checks.append(row('扩展版本', `v${version}`, 'ok'));
-  checks.append(row('扩展后台', '已运行', 'ok'));
+  checks.append(row('扩展后台', shotThinkText('已运行'), 'ok'));
 
-  // 2. Which tab would be captured.
+  let verdict = { text: '', state: 'ok' };
+
   let tab;
   try {
     tab = await activeTab();
@@ -51,24 +68,23 @@ async function render() {
     checks.append(row('当前标签页', `无法读取：${error.message}`, 'err'));
   }
 
-  let verdict = { text: '', state: 'ok' };
-
   if (tab) {
     checks.append(row('标签页', tab.url || '(未知)', ''));
     const restricted = isRestricted(tab.url);
     checks.append(row(
       '可截图',
-      restricted ? '否 — 浏览器禁止在此类页面注入脚本' : '是',
+      restricted ? shotThinkText('否 — 浏览器禁止在此类页面注入脚本') : shotThinkText('是'),
       restricted ? 'err' : 'ok'
     ));
     if (restricted) {
-      verdict = { text: '当前标签页无法截图。请切换到普通网页（http/https）后再试。', state: 'err' };
+      verdict = {
+        text: shotThinkText('当前标签页无法截图。请切换到普通网页（http/https）后再试。'),
+        state: 'err'
+      };
     }
   }
 
-  // 3. Stored failure, written by the worker when a capture attempt failed.
-  // A recorded failure is more specific than "this looks capturable", so it
-  // takes precedence over the URL-based guess above.
+  // A recorded failure is more specific than a URL-based guess, so it wins.
   const { lastCaptureError } = await chrome.storage.local.get('lastCaptureError');
   const box = $('lastError');
   box.replaceChildren();
@@ -78,69 +94,57 @@ async function render() {
     const permissionish = /权限|刷新|Cannot access/i.test(lastCaptureError.message);
     verdict = {
       text: permissionish
-        ? '上次失败是因为扩展还没拿到这个标签页的访问权限。先点“刷新当前标签页”，加载完再点图标或按 Ctrl+Shift+S。'
+        ? shotThinkText('上次失败是因为扩展还没拿到这个标签页的访问权限。先点“刷新当前标签页”，加载完再点图标或按 Alt+Shift+S。')
         : lastCaptureError.message,
       state: permissionish ? 'warn' : 'err'
     };
   } else {
-    box.append(row('无记录', '还没有失败的截图尝试'));
+    box.append(row('无记录', shotThinkText('还没有失败的截图尝试')));
   }
 
-  // 4. Permissions actually granted.
+  // Permissions actually granted.
   const manifest = chrome.runtime.getManifest();
   const perms = $('perms');
   perms.replaceChildren();
   perms.append(row('permissions', (manifest.permissions || []).join(', ')));
   perms.append(row('host_permissions', (manifest.host_permissions || []).join(', ') || '(无)'));
-  perms.append(row(
-    'activeTab 说明',
+  perms.append(row('activeTab 说明', shotThinkText(
     '点图标或按快捷键时临时授权当前标签页，不会长期访问所有网站'
-  ));
+  )));
 
-  // 5. The shortcut that is actually bound. `Ctrl+Shift+S` is not usable:
-  // Chrome reserves it for "Save page as", so a manifest suggestion for it is
-  // silently dropped and the command ends up unbound. MV3 has no
-  // `chrome.commands.update`, so the user has to set it on the shortcuts page.
+  // The shortcut that is actually bound. Ctrl+Shift+S is unusable because
+  // Chrome reserves it, and MV3 has no chrome.commands.update, so an unbound
+  // command can only be fixed on the shortcuts page.
   try {
     const commands = await chrome.commands.getAll();
     const capture = commands.find(c => c.name === 'capture');
     const bound = capture?.shortcut || '';
     if (bound) {
       perms.append(row('截图快捷键', bound, 'ok'));
+      if (bound === 'Ctrl+Shift+S') {
+        perms.append(row('提示', shotThinkText(
+          'Ctrl+Shift+S 被 Chrome 的“另存为”占用，可能不生效'
+        ), 'warn'));
+      }
     } else {
-      perms.append(row('截图快捷键', '未绑定', 'err'));
-      const fix = document.createElement('div');
-      fix.className = 'row';
-      const label = document.createElement('span');
-      label.className = 'k';
-      label.textContent = '去设置';
-      const link = document.createElement('a');
-      link.className = 'v';
-      link.textContent = 'chrome://extensions/shortcuts';
-      link.href = '#';
-      link.addEventListener('click', event => {
-        event.preventDefault();
-        void chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
-      });
-      fix.append(label, link);
-      perms.append(fix);
+      perms.append(row('截图快捷键', shotThinkText('未绑定'), 'err'));
+      perms.append(linkRow('去设置', 'chrome://extensions/shortcuts', 'chrome://extensions/shortcuts'));
       if (!verdict.text) {
         verdict = {
-          text: '截图快捷键没有绑定。点上面的链接设置一个（例如 Alt+Shift+S），或者直接点工具栏图标。',
+          text: shotThinkText('截图快捷键没有绑定。点上面的链接设置一个（例如 Alt+Shift+S），或者直接点工具栏图标。'),
           state: 'warn'
         };
       }
-    }
-    // A reserved combination silently fails to bind, so warn about it by name.
-    if (bound === 'Ctrl+Shift+S') {
-      perms.append(row('提示', 'Ctrl+Shift+S 被 Chrome 的“另存为”占用，可能不生效', 'warn'));
     }
   } catch (error) {
     perms.append(row('截图快捷键', `无法读取：${error.message}`, 'warn'));
   }
 
   if (!verdict.text) {
-    verdict = { text: '没有发现阻止截图的问题。如果点击仍然无反应，刷新标签页后再试。', state: 'ok' };
+    verdict = {
+      text: shotThinkText('没有发现阻止截图的问题。如果点击仍然无反应，刷新标签页后再试。'),
+      state: 'ok'
+    };
   }
   const v = $('verdict');
   v.textContent = verdict.text;
@@ -150,11 +154,9 @@ async function render() {
 $('reload').addEventListener('click', async () => {
   const tab = await activeTab();
   if (!tab?.id) return;
-  // Reloading is the actual fix for the most common cause: the tab existed
-  // before the extension was installed, so no content script can reach it.
   await chrome.tabs.reload(tab.id);
   const v = $('verdict');
-  v.textContent = '已刷新。等页面加载完成后，点扩展图标或按 Ctrl+Shift+S 再试一次。';
+  v.textContent = shotThinkText('已刷新。等页面加载完成后，点扩展图标或按 Alt+Shift+S 再试一次。');
   v.className = 'verdict ok';
 });
 
@@ -167,7 +169,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.lastCaptureError) void render();
 });
 
+// Re-render on language change so dynamically built rows follow.
+document.addEventListener('shotthink:language', () => void render());
+
 (async () => {
-  if (typeof shotThinkLocalizePage === 'function') shotThinkLocalizePage();
+  await shotThinkLoadPrefs();
   await render();
 })();
