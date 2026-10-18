@@ -1,0 +1,9 @@
+# Normalise line endings so diffs stay readable across Windows and CI.
+* text=auto eol=lf
+
+# Binary assets must never be converted.
+*.png binary
+*.jpg binary
+*.ico binary
+*.zip binary
+*.crx binary
