@@ -35,7 +35,12 @@ async function render() {
   const checks = $('checks');
   checks.replaceChildren();
 
+  // Version first, so a reload that did not pick up new code is obvious.
+  const version = chrome.runtime.getManifest().version;
+  $('version').textContent = `v${version}`;
+
   // 1. Manifest / worker alive. If this page rendered, the worker answered.
+  checks.append(row('扩展版本', `v${version}`, 'ok'));
   checks.append(row('扩展后台', '已运行', 'ok'));
 
   // 2. Which tab would be captured.
@@ -91,6 +96,48 @@ async function render() {
     'activeTab 说明',
     '点图标或按快捷键时临时授权当前标签页，不会长期访问所有网站'
   ));
+
+  // 5. The shortcut that is actually bound. `Ctrl+Shift+S` is not usable:
+  // Chrome reserves it for "Save page as", so a manifest suggestion for it is
+  // silently dropped and the command ends up unbound. MV3 has no
+  // `chrome.commands.update`, so the user has to set it on the shortcuts page.
+  try {
+    const commands = await chrome.commands.getAll();
+    const capture = commands.find(c => c.name === 'capture');
+    const bound = capture?.shortcut || '';
+    if (bound) {
+      perms.append(row('截图快捷键', bound, 'ok'));
+    } else {
+      perms.append(row('截图快捷键', '未绑定', 'err'));
+      const fix = document.createElement('div');
+      fix.className = 'row';
+      const label = document.createElement('span');
+      label.className = 'k';
+      label.textContent = '去设置';
+      const link = document.createElement('a');
+      link.className = 'v';
+      link.textContent = 'chrome://extensions/shortcuts';
+      link.href = '#';
+      link.addEventListener('click', event => {
+        event.preventDefault();
+        void chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+      });
+      fix.append(label, link);
+      perms.append(fix);
+      if (!verdict.text) {
+        verdict = {
+          text: '截图快捷键没有绑定。点上面的链接设置一个（例如 Alt+Shift+S），或者直接点工具栏图标。',
+          state: 'warn'
+        };
+      }
+    }
+    // A reserved combination silently fails to bind, so warn about it by name.
+    if (bound === 'Ctrl+Shift+S') {
+      perms.append(row('提示', 'Ctrl+Shift+S 被 Chrome 的“另存为”占用，可能不生效', 'warn'));
+    }
+  } catch (error) {
+    perms.append(row('截图快捷键', `无法读取：${error.message}`, 'warn'));
+  }
 
   if (!verdict.text) {
     verdict = { text: '没有发现阻止截图的问题。如果点击仍然无反应，刷新标签页后再试。', state: 'ok' };

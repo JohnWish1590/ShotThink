@@ -36,6 +36,9 @@
   li{margin-bottom:6px}
   code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:5px;
        font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .ver{margin-left:auto;padding:3px 10px;border-radius:999px;
+       background:rgba(41,151,255,.16);color:var(--accent);
+       font-size:12px;font-weight:600}
   .verdict{margin-top:14px;padding:12px 14px;border-radius:10px;font-size:13px;
            border:1px solid var(--line);background:rgba(255,255,255,.04)}
 </style>
@@ -45,6 +48,7 @@
   <header>
     <img src="../icons/icon48.png" alt="">
     <h1>ShotThink 诊断</h1>
+    <span class="ver" id="version"></span>
   </header>
   <p style="color:var(--muted);margin:0 0 20px">
     截图无法启动时，先在这里看原因。这个页面只读取本扩展自己的状态，不读取网页内容。

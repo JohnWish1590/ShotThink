@@ -96,6 +96,30 @@
     root.id = 'shotthink-root';
     root.setAttribute('data-shotthink', '1');
 
+    /*
+     * Scale factor for the toolbar.
+     *
+     * Mouse4's `adapt_to_screen` multiplies by `logicalDotsPerInch / 144`.
+     * Since `logicalDotsPerInch` is 96 * devicePixelRatio, the button's physical
+     * size is
+     *
+     *     46 * (96 * dpr) / 144  =  46 * dpr * 0.667  physical px
+     *
+     * which in CSS pixels divides out to a constant:
+     *
+     *     46 * 96 / 144  =  30.7 CSS px
+     *
+     * In other words Mouse4 is holding a fixed physical size (about 8mm), and
+     * CSS pixels already encode that scaling. So the factor must NOT depend on
+     * devicePixelRatio: a hard-coded 42px button is what looked oversized on a
+     * scaled display, because it asked for 42 CSS px instead of 31.
+     *
+     * Browser zoom changes the CSS pixel size, so the factor is applied only
+     * for the base ratio and clamped to stay usable at extreme zoom levels.
+     */
+    const scale = 96 / 144; // 0.667, matching Mouse4's 144-DPI baseline
+    root.style.setProperty('--st-scale', scale.toFixed(3));
+
     canvas = document.createElement('canvas');
     canvas.id = 'shotthink-canvas';
     root.append(canvas);
@@ -113,30 +137,46 @@
          programmatically by captureLongPage, not by wheel events. */
       #shotthink-canvas { position: absolute; inset: 0; display: block; }
 
-      /* Toolbar: Mouse4 APPLE_THEME['toolbar_css'] */
+      /* Toolbar: Mouse4 APPLE_THEME['toolbar_css']
+         Every size below is in CSS pixels and is multiplied by --st-scale
+         (see buildDom), so the toolbar keeps Mouse4's physical proportions on
+         a display with browser zoom or OS scaling. A hard-coded 42px button
+         rendered ~79px tall at devicePixelRatio 1.875, which looked huge. */
       .st-toolbar {
-        position: fixed; display: flex; align-items: center; gap: 3px;
-        padding: 7px 8px;
+        position: fixed; display: flex; align-items: center;
+        gap: calc(3px * var(--st-scale));
+        padding: calc(7px * var(--st-scale)) calc(8px * var(--st-scale));
         background: rgba(24,24,27,0.97);
         border: 1px solid rgba(255,255,255,0.14);
-        border-radius: 17px;
+        border-radius: calc(17px * var(--st-scale));
         box-shadow: 0 10px 34px rgba(0,0,0,0.45);
         pointer-events: auto;
       }
+      /* A flex display overrides the browser default [hidden] rule, so the
+         attribute has to be honoured explicitly or the toolbar shows before a
+         region is selected. */
+      .st-toolbar[hidden], .st-colors[hidden] { display: none !important; }
       .st-toolbar button {
         display: flex; align-items: center; justify-content: center;
-        width: 42px; height: 42px; padding: 0; margin: 0;
-        background: transparent; border: none; border-radius: 11px;
+        width: calc(46px * var(--st-scale));
+        height: calc(46px * var(--st-scale));
+        padding: 0; margin: 0;
+        background: transparent; border: none;
+        border-radius: calc(11px * var(--st-scale));
         color: #E5E5EA; cursor: pointer;
       }
       .st-toolbar button:hover { background: rgba(255,255,255,0.12); color: #fff; }
       .st-toolbar button[data-active="1"] { background: rgba(41,151,255,0.30); color: ${ACCENT}; }
       .st-toolbar button:disabled { opacity: .38; cursor: default; }
       .st-toolbar button:disabled:hover { background: transparent; }
-      .st-toolbar svg { width: 24px; height: 24px; display: block; }
+      .st-toolbar svg {
+        width: calc(24px * var(--st-scale));
+        height: calc(24px * var(--st-scale));
+        display: block;
+      }
 
       /* Result buttons keep Mouse4's per-action colours. */
-      .st-toolbar button[data-kind] { border-radius: 11px; }
+      .st-toolbar button[data-kind] { border-radius: calc(11px * var(--st-scale)); }
       .st-toolbar button[data-kind="undo"]   { background: ${BTN_COLORS.undo};   color: #210F12; }
       .st-toolbar button[data-kind="long"]   { background: ${BTN_COLORS.long};   color: #101827; }
       .st-toolbar button[data-kind="ok"]     { background: ${BTN_COLORS.ok};     color: #07140B; }
@@ -144,27 +184,37 @@
       .st-toolbar button[data-kind="cancel"] { background: ${BTN_COLORS.cancel}; color: #151A28; }
       .st-toolbar button[data-kind]:hover { filter: brightness(1.08); }
 
-      .st-sep { width: 1px; height: 26px; background: rgba(255,255,255,0.18); margin: 0 2px; }
+      .st-sep {
+        width: 1px; height: calc(26px * var(--st-scale));
+        background: rgba(255,255,255,0.18);
+        margin: 0 calc(2px * var(--st-scale));
+      }
 
       /* Colour panel: Mouse4 APPLE_THEME['panel_css'] + combo_css */
       .st-colors {
-        position: fixed; display: flex; align-items: center; gap: 10px;
-        padding: 6px 10px;
+        position: fixed; display: flex; align-items: center;
+        gap: calc(10px * var(--st-scale));
+        padding: calc(6px * var(--st-scale)) calc(10px * var(--st-scale));
         background: rgba(24,24,27,0.96);
         border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 14px;
+        border-radius: calc(14px * var(--st-scale));
         box-shadow: 0 8px 26px rgba(0,0,0,0.4);
         pointer-events: auto;
       }
       .st-colors select {
-        width: 68px; padding: 3px 6px;
+        width: calc(68px * var(--st-scale));
+        padding: calc(3px * var(--st-scale)) calc(6px * var(--st-scale));
         background: rgba(255,255,255,0.10); color: #fff;
-        border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: calc(8px * var(--st-scale));
         font: inherit;
       }
       .st-colors select option { background: #2b2b2b; color: #fff; }
       .st-swatch {
-        width: 24px; height: 24px; padding: 0; border-radius: 12px;
+        width: calc(24px * var(--st-scale));
+        height: calc(24px * var(--st-scale));
+        padding: 0;
+        border-radius: calc(12px * var(--st-scale));
         border: 2px solid rgba(255,255,255,0.35);
         cursor: pointer;
       }
@@ -226,6 +276,9 @@
   function buildToolbar() {
     toolbar = document.createElement('div');
     toolbar.className = 'st-toolbar';
+    // Hidden until a region is selected; Mouse4 shows the toolbar only after
+    // the user has dragged out a selection.
+    toolbar.hidden = true;
 
     const toolDefs = [
       ['rect', SVG.rect, '矩形'],
@@ -355,10 +408,13 @@
       const button = toolbar.querySelector(`[data-id="${id}"]`);
       if (button) button.dataset.active = state.mode === mode ? '1' : '0';
     }
-    const showColors = Boolean(state.mode);
-    colorsPanel.hidden = !showColors;
-    // Mouse4 shows the colour swatches for every tool, and the size selector
-    // only for text (toolbar.py: setVisible(mode is not None) / == 'text').
+
+    // The colour panel is a drill-down from a tool, not part of the base
+    // toolbar. It appears only once a drawing tool is active, matching
+    // Mouse4's set_draw_mode (`colors_widget.setVisible(mode is not None)`),
+    // and the size selector only for text.
+    const toolActive = Boolean(state.mode) && !state.longCapture;
+    colorsPanel.hidden = !toolActive;
     const sizeSelect = colorsPanel.querySelector('select');
     if (sizeSelect) sizeSelect.style.display = state.mode === 'text' ? '' : 'none';
 

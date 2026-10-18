@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ShotThink",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Capture, annotate, and send a browser screenshot into your own ChatGPT conversation. No local app, no API key.",
   "permissions": [
     "activeTab",
@@ -26,7 +26,8 @@
   "commands": {
     "capture": {
       "suggested_key": {
-        "default": "Ctrl+Shift+S"
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
       },
       "description": "Capture the visible area"
     }

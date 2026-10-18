@@ -4,7 +4,7 @@ Capture, annotate, and send a browser screenshot into your own ChatGPT conversat
 
 ## 中文说明
 
-ShotThink 是一个纯 Chrome 插件：点击扩展图标（或按 `Ctrl+Shift+S`）框选网页内容，标注后自动发送到你自己的 ChatGPT 账号，按日期每天一个对话。
+ShotThink 是一个纯 Chrome 插件：点击扩展图标（或按 `Alt+Shift+S`）框选网页内容，标注后自动发送到你自己的 ChatGPT 账号，按日期每天一个对话。
 
 不安装任何桌面程序，不需要 API Key，翻译也直接由已连接的 ChatGPT 账号完成。
 

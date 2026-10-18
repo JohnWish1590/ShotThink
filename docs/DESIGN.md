@@ -24,7 +24,7 @@ So ShotThink is not a rewrite. It replaces the capture source and drops the nati
 ## 2. Architecture
 
 ```
-   user clicks the toolbar icon or presses Ctrl+Shift+S
+   user clicks the toolbar icon or presses Alt+Shift+S
                       │
                       ▼
    capture.js ── captureVisibleTab ──► frozen bitmap (device pixels)
