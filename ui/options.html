@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShotThink</title>
+<link rel="icon" href="../icons/icon32.png">
+<style>
+  :root {
+    --bg: #18181b;
+    --panel: #232327;
+    --line: rgba(255, 255, 255, 0.12);
+    --text: #e5e5ea;
+    --muted: #9a9aa2;
+    --accent: #2997ff;
+    --ok: #68dc8c;
+    --warn: #e4bd64;
+    --err: #d98585;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px 56px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  header img { width: 44px; height: 44px; }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  .tag {
+    margin-left: auto; padding: 3px 10px; border-radius: 999px;
+    background: rgba(41, 151, 255, 0.16); color: var(--accent);
+    font-size: 12px; font-weight: 600;
+  }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px 20px; margin-bottom: 16px;
+  }
+  h2 { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .intro { margin: 0 0 18px; color: var(--muted); }
+  textarea {
+    width: 100%; min-height: 110px; resize: vertical;
+    background: rgba(255, 255, 255, 0.06); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font: inherit;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  button {
+    background: rgba(255, 255, 255, 0.09); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 7px 14px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: rgba(255, 255, 255, 0.14); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04121f; font-weight: 600; }
+  button.quiet { background: transparent; }
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .status { color: var(--muted); font-size: 13px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  li:last-child { border-bottom: none; }
+  li .state { margin-left: auto; color: var(--muted); white-space: nowrap; }
+  li .state.err { color: var(--err); }
+  li .state.ok { color: var(--ok); }
+  li .state.warn { color: var(--warn); }
+  a { color: var(--accent); }
+  small { display: block; margin-top: 10px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="../icons/icon48.png" width="44" height="44" alt="">
+    <h1>ShotThink</h1>
+    <span class="tag" id="dailyTag">每天一个聊天</span>
+  </header>
+
+  <p class="intro">
+    点击工具栏图标或按 <strong>Ctrl+Shift+S</strong> 框选网页内容，标注后发送到你自己已登录的 ChatGPT 账号。
+  </p>
+
+  <section class="panel">
+    <h2>分析规则</h2>
+    <textarea id="rules" placeholder="每次发送时附带的固定分析指令"></textarea>
+    <div class="row">
+      <button class="primary" id="save">保存</button>
+      <span class="status" id="rulesStatus"></span>
+    </div>
+    <small>规则会随每张截图一起写入 ChatGPT 对话，作为该条消息的分析要求。</small>
+  </section>
+
+  <section class="panel">
+    <h2>发送记录</h2>
+    <ul id="jobs"></ul>
+    <p class="status" id="emptyHistory">还没有发送记录。截一张图开始。</p>
+    <div class="row">
+      <button class="quiet" id="manual" hidden>人工处理</button>
+      <button class="quiet" id="clear">清理已发送记录</button>
+      <span class="status" id="notice"></span>
+    </div>
+    <small>单个任务异常会转入人工处理，不会阻止后续截图。结果不确定时先查看对应对话，避免重复发送。后台聊天标签页请保持打开。</small>
+  </section>
+
+  <section class="panel">
+    <h2>发送遇到问题</h2>
+    <div class="row">
+      <button class="quiet" id="verify">检查待核对消息</button>
+      <button class="quiet" id="resume" hidden>恢复发送</button>
+    </div>
+    <small>检查不会重新发送，只确认消息是否已经出现在对话里。</small>
+  </section>
+</main>
+<script src="../src/i18n.js"></script>
+<script src="options.js"></script>
+</body>
+</html>
