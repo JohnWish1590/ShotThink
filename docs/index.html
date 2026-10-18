@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShotThink — Capture, annotate, ask. Free Chrome extension.</title>
+<meta name="description" content="A free Chrome extension that sends a browser screenshot to your own ChatGPT conversation. No API key, no subscription, no per-request billing.">
+<link rel="canonical" href="https://johnwish1590.github.io/ShotThink/">
+<link rel="icon" href="icons/icon32.png">
+<link rel="apple-touch-icon" href="icons/icon128.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ShotThink — Capture, annotate, ask.">
+<meta property="og:description" content="Free Chrome extension. Capture a region, annotate it, send it to your own ChatGPT. No API key, no subscription.">
+<meta property="og:url" content="https://johnwish1590.github.io/ShotThink/">
+<meta property="og:image" content="https://johnwish1590.github.io/ShotThink/screenshots/06-overlay-annotated.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ShotThink",
+  "applicationCategory": "BrowserApplication",
+  "operatingSystem": "Chrome, Edge, Brave, any Chromium browser",
+  "description": "A free Chrome extension that sends a browser screenshot to your own ChatGPT conversation. No API key, no subscription, no per-request billing.",
+  "url": "https://johnwish1590.github.io/ShotThink/",
+  "downloadUrl": "https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "license": "https://github.com/JohnWish1590/ShotThink/blob/main/LICENSE",
+  "softwareVersion": "1.0.0"
+}
+</script>
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #17171a;
+    --surface-2: #1e1e22;
+    --line: rgba(255,255,255,.10);
+    --line-strong: rgba(255,255,255,.16);
+    --text: #ececf0;
+    --muted: #9a9aa4;
+    --accent: #2997ff;
+    --accent-soft: rgba(41,151,255,.14);
+    --ok: #68dc8c;
+    --radius: 16px;
+    --max: 1080px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+  /* header */
+  header.site {
+    position: sticky; top: 0; z-index: 20;
+    backdrop-filter: blur(14px);
+    background: rgba(15,15,17,.82);
+    border-bottom: 1px solid var(--line);
+  }
+  header.site .wrap {
+    display: flex; align-items: center; gap: 12px;
+    height: 64px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 650; font-size: 16px; }
+  .brand img { width: 28px; height: 28px; border-radius: 7px; }
+  .brand:hover { text-decoration: none; }
+  nav.links { margin-left: auto; display: flex; align-items: center; gap: 22px; }
+  nav.links a { color: var(--muted); font-size: 14px; }
+  nav.links a:hover { color: var(--text); text-decoration: none; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 18px; border-radius: 10px;
+    background: var(--accent); color: #04121f;
+    font-weight: 650; font-size: 14px;
+    border: 1px solid var(--accent);
+    transition: filter .15s;
+  }
+  .btn:hover { filter: brightness(1.1); text-decoration: none; }
+  .btn.ghost {
+    background: transparent; color: var(--text);
+    border-color: var(--line-strong);
+  }
+  .btn.ghost:hover { background: var(--surface-2); }
+
+  /* hero */
+  .hero { padding: 72px 0 40px; }
+  .hero h1 {
+    margin: 0 0 16px;
+    font-size: clamp(34px, 5vw, 56px);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p.lead {
+    margin: 0 0 28px;
+    font-size: clamp(16px, 2vw, 19px);
+    color: var(--muted);
+    max-width: 620px;
+  }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .hero-note { color: var(--muted); font-size: 13px; }
+  .hero-note strong { color: var(--ok); font-weight: 600; }
+
+  .shot {
+    margin: 40px 0 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  /* sections */
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  section h2 {
+    margin: 0 0 8px;
+    font-size: clamp(24px, 3vw, 32px);
+    letter-spacing: -0.01em;
+    font-weight: 680;
+  }
+  section p.sub { margin: 0 0 32px; color: var(--muted); max-width: 640px; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid.two { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .grid.three { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 22px 24px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 650; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .card .icon { font-size: 20px; margin-bottom: 10px; display: block; }
+
+  /* free banner */
+  .free {
+    background: linear-gradient(160deg, var(--accent-soft), transparent 70%);
+    border: 1px solid rgba(41,151,255,.28);
+    border-radius: var(--radius);
+    padding: 30px 32px;
+  }
+  .free h2 { margin-bottom: 10px; }
+  .free p { color: var(--muted); margin: 0 0 10px; }
+  .free p:last-child { margin-bottom: 0; }
+  .free strong { color: var(--text); }
+
+  /* steps */
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+  ol.steps li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 22px 52px;
+    color: var(--muted);
+  }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 650; font-size: 14px;
+  }
+  ol.steps li:last-child { padding-bottom: 0; }
+  ol.steps li strong { color: var(--text); display: block; margin-bottom: 2px; }
+
+  code, kbd {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: .88em;
+    color: var(--text);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td:first-child { white-space: nowrap; color: var(--text); }
+  td:last-child { color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+
+  .warn {
+    border-left: 3px solid var(--ok);
+    padding: 4px 0 4px 18px;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .warn:last-child { margin-bottom: 0; }
+  .warn strong { color: var(--text); }
+
+  footer.site {
+    border-top: 1px solid var(--line);
+    padding: 34px 0 48px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  footer.site .wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  footer.site .right { margin-left: auto; display: flex; gap: 18px; }
+
+  @media (max-width: 720px) {
+    nav.links a:not(.btn) { display: none; }
+    .hero { padding: 44px 0 28px; }
+    section { padding: 44px 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <img src="icons/icon48.png" alt="">
+      <span>ShotThink</span>
+    </a>
+    <nav class="links">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#safety">Safety</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <div class="wrap hero">
+    <h1>Capture. Annotate. <em>Ask.</em></h1>
+    <p class="lead">
+      A Chrome extension that sends a browser screenshot straight into your own
+      ChatGPT conversation. Capture a region, mark it up, and it lands in a dated
+      chat with your standing instructions attached.
+    </p>
+    <div class="hero-actions">
+      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">Download for Chrome</a>
+      <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink">View source</a>
+    </div>
+    <p class="hero-note">
+      <strong>Free.</strong> No API key, no subscription, no per-request billing. MIT licensed.
+    </p>
+
+    <div class="shot">
+      <img src="demo-en.gif" alt="Selecting a region, annotating it with a rectangle and arrow, and sending it to ChatGPT" width="1080">
+    </div>
+  </div>
+
+  <section id="free">
+    <div class="wrap">
+      <div class="free">
+        <h2>Why it costs nothing</h2>
+        <p>
+          ShotThink does not call the OpenAI API. It drives the ChatGPT page you are
+          already signed in to: it picks the file input, writes your instructions into
+          the editor, and clicks send.
+        </p>
+        <p>
+          So it spends <strong>whatever your existing subscription already covers</strong>,
+          instead of billing you per token. There is no key to obtain and nothing to top up.
+        </p>
+        <p>
+          The trade-off is that delivery depends on ChatGPT's page structure and on a
+          background tab staying open. Every guard in the tool exists because of that.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>What it does</h2>
+      <p class="sub">Everything a screenshot tool needs, nothing it does not.</p>
+      <div class="grid three">
+        <div class="card">
+          <span class="icon">⌗</span>
+          <h3>Region capture</h3>
+          <p>Pixel-accurate at any display scaling, including 125% and 150% Windows scaling.</p>
+        </div>
+        <div class="card">
+          <span class="icon">✎</span>
+          <h3>Six annotation tools</h3>
+          <p>Rectangle, ellipse, arrow, pen, text and mosaic, with undo. Colours and font size are remembered.</p>
+        </div>
+        <div class="card">
+          <span class="icon">T</span>
+          <h3>Text that previews itself</h3>
+          <p>Opens where your mouse is, wraps at the selection edge, and draws exactly as it looked while typing.</p>
+        </div>
+        <div class="card">
+          <span class="icon">⤓</span>
+          <h3>Long capture</h3>
+          <p>Scrolls the page and stitches by exact scroll position. Sticky headers are suppressed so they do not repeat.</p>
+        </div>
+        <div class="card">
+          <span class="icon">◷</span>
+          <h3>One chat per day</h3>
+          <p>Each day gets a conversation named <code>YYYY-MM-DD</code>. Later captures append to it, numbered.</p>
+        </div>
+        <div class="card">
+          <span class="icon">◧</span>
+          <h3>Selected text</h3>
+          <p>Right-click any selected text → Send to AI. No clipboard reading, no global keyboard hooks.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="sub">
+        ShotThink is not on the Chrome Web Store — it automates a third-party site,
+        which is a poor fit for store review. Installing it takes about a minute.
+      </p>
+      <ol class="steps">
+        <li>
+          <strong>Download and unzip</strong>
+          <a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">ShotThink-1.0.0.zip</a>
+          into a folder you will keep.
+        </li>
+        <li>
+          <strong>Open <code>chrome://extensions/</code></strong>
+          and turn on <strong>Developer mode</strong> in the top right.
+        </li>
+        <li>
+          <strong>Click “Load unpacked”</strong>
+          and select the folder you unzipped.
+        </li>
+        <li>
+          <strong>Sign in to chatgpt.com</strong>
+          in the same browser profile. ShotThink uses that session; it never reads
+          your credentials.
+        </li>
+        <li>
+          <strong>Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></strong>
+          or click the toolbar icon. <code>Ctrl+Shift+S</code> is reserved by Chrome
+          for “Save page as”, so it cannot be used.
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="safety">
+    <div class="wrap">
+      <h2>Safety</h2>
+      <p class="sub">
+        These are not edge cases bolted on afterwards. They are the reason the tool
+        is usable at all.
+      </p>
+      <div class="warn">
+        <strong>A send whose outcome is unknown is never retried automatically.</strong>
+        It is marked uncertain and you check the conversation. A duplicate screenshot
+        in your chat is worse than asking you to look.
+      </div>
+      <div class="warn">
+        <strong>An existing draft is never overwritten.</strong>
+        If the composer already has text in it, the send stops and tells you.
+      </div>
+      <div class="warn">
+        <strong>A generating answer is never interrupted.</strong>
+        The queue waits for it to finish rather than cutting in.
+      </div>
+      <div class="warn">
+        <strong>Restricted pages are detected before injection.</strong>
+        <code>chrome://</code>, the Web Store, the PDF viewer and the extension's own
+        pages cannot be captured; the tool says so instead of failing silently.
+      </div>
+    </div>
+  </section>
+
+  <section id="permissions">
+    <div class="wrap">
+      <h2>Permissions</h2>
+      <p class="sub">
+        No <code>&lt;all_urls&gt;</code>. No <code>debugger</code>. No cookie access.
+      </p>
+      <table>
+        <thead><tr><th>Permission</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>activeTab</code></td><td>Capture and annotate only the tab you invoke it on. Granted by your click or shortcut — never standing access to every site.</td></tr>
+          <tr><td><code>scripting</code></td><td>Inject the overlay into that tab.</td></tr>
+          <tr><td><code>storage</code></td><td>Queue metadata, the daily-chat mapping, and your settings.</td></tr>
+          <tr><td><code>contextMenus</code></td><td>The “Send to AI” item for selected text.</td></tr>
+          <tr><td><code>alarms</code></td><td>Settle jobs whose page died mid-send.</td></tr>
+          <tr><td><code>chatgpt.com</code></td><td>Upload the image and press send on your behalf.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div class="grid two" style="margin-top:28px">
+        <div class="card">
+          <h3>Does it work with a free ChatGPT account?</h3>
+          <p>Yes. It uses whatever the browser is signed in to. If the web page works, ShotThink works.</p>
+        </div>
+        <div class="card">
+          <h3>Will my screenshots be sent to your server?</h3>
+          <p>No. There is no server. The image goes from your browser to chatgpt.com and nowhere else.</p>
+        </div>
+        <div class="card">
+          <h3>Why can't it capture WeChat or Excel?</h3>
+          <p>A browser extension can only see browser content. For the whole desktop, the same author makes <a href="https://github.com/JohnWish1590/Mouse4">Mouse4</a>, a Windows tool.</p>
+        </div>
+        <div class="card">
+          <h3>What happens if ChatGPT changes its page?</h3>
+          <p>Sending pauses and tells you, rather than guessing. The selectors are redundant and the failure is visible, so an update can fix it quickly.</p>
+        </div>
+        <div class="card">
+          <h3>Do I need to keep a ChatGPT tab open?</h3>
+          <p>Yes. It runs in the background and does not need to be in front, but closing it stops delivery.</p>
+        </div>
+        <div class="card">
+          <h3>Is Firefox supported?</h3>
+          <p>No. The extension relies on Chromium's <code>captureVisibleTab</code> and <code>scripting</code> behaviour.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <h2>Get it</h2>
+      <p class="sub">Free, MIT licensed, and about 80 KB.</p>
+      <div class="hero-actions">
+        <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">Download v1.0.0</a>
+        <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink">Source on GitHub</a>
+        <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink/blob/main/CHANGELOG.md">Changelog</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>ShotThink · Capture, annotate, ask.</span>
+    <div class="right">
+      <a href="https://github.com/JohnWish1590/ShotThink">GitHub</a>
+      <a href="https://github.com/JohnWish1590/ShotThink/blob/main/LICENSE">MIT License</a>
+      <a href="https://github.com/JohnWish1590/Mouse4">Mouse4</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

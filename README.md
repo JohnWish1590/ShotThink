@@ -9,10 +9,16 @@ your standing instructions attached.
 No desktop app. No API key. No subscription. No per-request billing.
 
 <p align="center">
-  <img src="docs/screenshots/06-overlay-annotated.png" alt="Annotating a screenshot" width="720">
+  <img src="docs/demo-en.gif" alt="ShotThink: select a region, annotate it, send it to ChatGPT" width="820">
 </p>
 
-**[Download v1.0.0](https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip)** · **[Watch the 30-second demo](docs/demo.mp4)**
+<p align="center">
+  <a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip"><b>Download v1.0.0</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/demo.mp4">Watch the 32-second demo</a>
+  &nbsp;·&nbsp;
+  <a href="https://johnwish1590.github.io/ShotThink/">Product page</a>
+</p>
 
 ---
 
