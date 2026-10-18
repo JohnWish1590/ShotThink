@@ -33,6 +33,11 @@
   const MIN_SELECTION = 10;
   const DOUBLE_CLICK_MS = 320;
 
+  /* i18n.js is injected first, but the overlay must never hard-fail if a stale
+     tab still has an older build cached. Fall back to the raw string. */
+  const t = text =>
+    typeof globalThis.shotThinkText === 'function' ? globalThis.shotThinkText(text) : text;
+
   const BTN_COLORS = {
     undo: '#D98585',
     long: '#7AA2F7',
@@ -103,6 +108,9 @@
         font: 13px/1.4 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
         -webkit-user-select: none; user-select: none;
       }
+      /* During long capture the shield stays interactive so the page cannot be
+         clicked while slices are being taken. Scrolling is driven
+         programmatically by captureLongPage, not by wheel events. */
       #shotthink-canvas { position: absolute; inset: 0; display: block; }
 
       /* Toolbar: Mouse4 APPLE_THEME['toolbar_css'] */
@@ -203,8 +211,8 @@
   function iconButton(svg, title, { kind, onClick, id } = {}) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.title = shotThinkText(title);
-    button.setAttribute('aria-label', shotThinkText(title));
+    button.title = t(title);
+    button.setAttribute('aria-label', t(title));
     if (kind) button.dataset.kind = kind;
     if (id) button.dataset.id = id;
     button.innerHTML = svg;
@@ -264,7 +272,7 @@
     colorsPanel.hidden = true;
 
     const select = document.createElement('select');
-    select.setAttribute('aria-label', shotThinkText('文字'));
+    select.setAttribute('aria-label', t('文字'));
     for (const size of FONT_SIZES) {
       const option = document.createElement('option');
       option.value = String(size);
@@ -877,12 +885,15 @@
     cancelTextInput();
     refreshToolbar();
     draw();
-    showToast(shotThinkText('页面正在滚动，请稍候。'));
+    showToast(t('页面正在滚动，请稍候。'));
 
     try {
       const reply = await chrome.runtime.sendMessage({
         type: 'captureLongPage',
-        windowId: state.windowId
+        windowId: state.windowId,
+        // Pass the selection so sticky elements the user deliberately framed
+        // are kept, while page chrome outside it is hidden.
+        selection: { x: sel.x, y: sel.y, w: sel.w, h: sel.h }
       });
       if (!reply?.ok) throw Error(reply?.error || '长截图失败。');
 
@@ -1014,7 +1025,7 @@
   chrome.runtime.onMessage.addListener((message, sender, reply) => {
     if (message.type === 'shotthink:longProgress') {
       if (toast && state.longCapture) {
-        toast.textContent = `${shotThinkText('准备截图…')} ${message.index + 1}/${message.total}`;
+        toast.textContent = `${t('准备截图…')} ${message.index + 1}/${message.total}`;
       }
       return;
     }

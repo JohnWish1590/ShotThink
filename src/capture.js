@@ -57,15 +57,15 @@ async function captureFrameForOverlay(tabId, windowId) {
  * That removes the entire cv2 matching path. What remains is pacing, waiting
  * for the scroll to settle, and restoring the reader's position afterwards.
  */
-async function captureLongPage(tabId, windowId, { maxSlices = 40, onProgress } = {}) {
+async function captureLongPage(tabId, windowId, { maxSlices = 60, onProgress } = {}) {
   const metrics = await readViewport(tabId);
   const slices = [];
   const originalY = metrics.scrollY;
   const step = Math.max(1, Math.floor(metrics.height * 0.9));
-  const total = Math.ceil(metrics.scrollHeight / step);
+  const total = Math.min(maxSlices, Math.ceil(metrics.scrollHeight / step));
 
   try {
-    for (let index = 0; index < maxSlices; index++) {
+    for (let index = 0; index < total; index++) {
       const targetY = index * step;
       if (index > 0 && targetY > metrics.scrollHeight - metrics.height) break;
 
@@ -101,33 +101,64 @@ async function captureLongPage(tabId, windowId, { maxSlices = 40, onProgress } =
 }
 
 /**
- * Hide `position: fixed` chrome for the duration of a long capture.
+ * Hide sticky/fixed chrome for the duration of a long capture.
  *
  * Without this every slice repeats the sticky header and the stitched image
  * shows it over and over. Returns a function that restores the page.
+ *
+ * The rule is driven by each element's computed `position`, not by its inline
+ * style attribute or by tag names: most sticky headers get their position from
+ * a stylesheet, so an attribute match misses them, and a blanket `header, nav`
+ * rule hides content the user may have deliberately selected. Elements fully
+ * inside the selection are kept visible.
  */
-async function suppressStickyElements(tabId) {
+async function suppressStickyElements(tabId, selection) {
   const [{ result }] = await chrome.scripting.executeScript({
     target: { tabId },
-    func: () => {
+    args: [selection || null],
+    func: sel => {
+      document.getElementById('shotthink-longcapture')?.remove();
       const style = document.createElement('style');
       style.id = 'shotthink-longcapture';
       style.textContent = `
-        *[style*="position: fixed"], *[style*="position:fixed"] { visibility: hidden !important; }
-        header, nav, [role="banner"], [data-sticky], .sticky, .fixed { visibility: hidden !important; }
+        html.shotthink-longcapture .shotthink-hide-sticky {
+          visibility: hidden !important;
+        }
       `;
       document.documentElement.append(style);
-      return true;
+
+      const tagged = [];
+      for (const element of document.body?.querySelectorAll('*') || []) {
+        const position = getComputedStyle(element).position;
+        if (position !== 'fixed' && position !== 'sticky') continue;
+        if (sel) {
+          const box = element.getBoundingClientRect();
+          const insideSelection =
+            box.left >= sel.x && box.top >= sel.y &&
+            box.right <= sel.x + sel.w && box.bottom <= sel.y + sel.h;
+          if (insideSelection) continue; // the user wants this one captured
+        }
+        element.classList.add('shotthink-hide-sticky');
+        tagged.push(element);
+      }
+      document.documentElement.classList.add('shotthink-longcapture');
+      return tagged.length;
     }
   });
 
   return async () => {
-    if (!result) return;
     await chrome.scripting
       .executeScript({
         target: { tabId },
-        func: () => document.getElementById('shotthink-longcapture')?.remove()
+        func: () => {
+          document.documentElement.classList.remove('shotthink-longcapture');
+          document.getElementById('shotthink-longcapture')?.remove();
+          for (const element of document.querySelectorAll('.shotthink-hide-sticky')) {
+            element.classList.remove('shotthink-hide-sticky');
+          }
+        }
       })
       .catch(() => {});
+    void result;
   };
 }

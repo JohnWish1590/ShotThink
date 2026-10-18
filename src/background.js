@@ -63,9 +63,13 @@ if (chrome.commands?.onCommand) {
 
 async function startCapture(tabId) {
   try {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ['src/overlay.js'] });
+    // i18n.js must land before overlay.js: the overlay calls shotThinkText()
+    // while building its toolbar, and would otherwise throw on first paint.
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['src/i18n.js', 'src/overlay.js']
+    });
     const tab = await chrome.tabs.get(tabId);
-    await chrome.scripting.executeScript({ target: { tabId }, files: ['src/capture.js'] });
     await chrome.tabs.sendMessage(tabId, { type: CAPTURE_MESSAGE, windowId: tab.windowId });
   } catch (error) {
     // chrome:// pages, the Web Store, and the PDF viewer reject injection.
@@ -164,9 +168,10 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     /* Long capture: scroll, sample, and hand the slices back to the overlay. */
     if (message.type === 'captureLongPage' && sender.tab?.id) {
       const windowId = message.windowId ?? sender.tab.windowId;
-      const restore = await suppressStickyElements(sender.tab.id);
+      const restore = await suppressStickyElements(sender.tab.id, message.selection);
       try {
         const result = await captureLongPage(sender.tab.id, windowId, {
+          maxSlices: message.maxSlices,
           onProgress: progress => {
             void chrome.tabs
               .sendMessage(sender.tab.id, { type: 'shotthink:longProgress', ...progress })
@@ -601,12 +606,20 @@ async function processQueue() {
           stored.error = error.message;
           if (tab) stored.url = job.targetUrl || 'https://chatgpt.com/';
         });
+
+        // Remember which day needs review, so a later capture for the same
+        // date can report it instead of silently opening a second chat.
+        if (error.submissionAttempted !== false) {
+          await markDailyUncertain({ ...job, day: job.day || job.captureDate }).catch(() => {});
+        }
+
         if (error.systemFailure === true) {
           await setQueuePaused(error);
           paused = true;
           break;
         }
         // A single task is retained for manual review; later tasks keep moving.
+        // Its bytes stay in IndexedDB so the user can inspect what was sent.
       }
     }
   } finally {
