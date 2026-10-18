@@ -622,6 +622,37 @@ test('a reported failure is re-checked against the page', async () => {
   assert.match(sender, /message\.type==='verifyTitle'/, 'sender must answer the check');
 });
 
+/* ------------------------------------------------------ shortcut settings */
+
+test('the options page shows the bound shortcut', async () => {
+  const options = await read('ui/options.js');
+  assert.match(options, /chrome\.commands\.getAll\(\)/, 'must read the real binding');
+  const html = await read('ui/options.html');
+  assert.match(html, /id="shortcutValue"/, 'needs a field for the current shortcut');
+});
+
+test('the options page opens Chrome shortcut settings on demand', async () => {
+  // chrome.tabs.create is the only route that works: an <a href="chrome://...">
+  // is blocked by the renderer, and MV3 has no chrome.commands.update.
+  const options = await read('ui/options.js');
+  assert.match(options, /chrome\.tabs\.create\(\{\s*url:\s*'chrome:\/\/extensions\/shortcuts'/,
+    'must open the shortcuts page via tabs.create');
+  const html = await read('ui/options.html');
+  assert.match(html, /id="openShortcuts"/, 'needs a button');
+  assert.match(html, /打开 Chrome 快捷键设置/, 'the button must say what it does');
+});
+
+test('the shortcut button is a button, not a chrome:// link', async () => {
+  const html = await read('ui/options.html');
+  const block = html.slice(html.indexOf('id="openShortcuts"') - 200, html.indexOf('id="openShortcuts"') + 100);
+  assert.ok(!/<a[^>]*href="chrome:\/\//.test(block), 'a chrome:// anchor would be blocked');
+});
+
+test('an unbound shortcut is reported rather than left blank', async () => {
+  const options = await read('ui/options.js');
+  assert.match(options, /bound \|\| shotThinkText\('未绑定'\)/, 'must say "not bound"');
+});
+
 /* ---------------------------------------------------------------- report */
 
 await Promise.all(pendingTests);

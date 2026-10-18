@@ -20,6 +20,35 @@ const isManualJob = job => ['failed', 'uncertain'].includes(job.status);
 
 let manualOnly = false;
 
+/* ------------------------------------------------------------- shortcut */
+
+/**
+ * Show the shortcut that is actually bound.
+ *
+ * `chrome.commands.update` does not exist in MV3, so the extension cannot change
+ * its own shortcut. All it can do is report the current binding and send the user
+ * to the page where Chrome manages it.
+ */
+async function loadShortcut() {
+  try {
+    const commands = await chrome.commands.getAll();
+    const capture = commands.find(command => command.name === 'capture');
+    const bound = capture?.shortcut || '';
+    $('shortcutValue').textContent = bound || shotThinkText('未绑定');
+    $('shortcutValue').classList.toggle('err', !bound);
+  } catch (error) {
+    $('shortcutValue').textContent = `${shotThinkText('无法读取')}: ${error.message}`;
+    $('shortcutValue').classList.add('err');
+  }
+}
+
+$('openShortcuts').addEventListener('click', () => {
+  // chrome.tabs.create is allowed to open chrome://extensions/shortcuts from an
+  // extension page, which is why this is a button rather than a plain link:
+  // an <a href="chrome://..."> is blocked by the renderer.
+  void chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+});
+
 /* ---------------------------------------------------------- toolbar size */
 
 function paintScale(scale) {
@@ -254,6 +283,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 // rule body in step when it is still one of the built-in defaults.
 document.addEventListener('shotthink:language', async event => {
   void render();
+  void loadShortcut();
   if (!shotThinkIsDefaultRules($('rules').value)) return;
   const lang = event.detail;
   rulesLanguage = lang;
@@ -270,6 +300,7 @@ document.addEventListener('shotthink:language', async event => {
   $('version').textContent = `v${chrome.runtime.getManifest().version}`;
   await shotThinkLoadPrefs();
   await loadScale();
+  await loadShortcut();
   await loadRules();
   await render();
 })();

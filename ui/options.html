@@ -12,7 +12,7 @@
   <header>
     <img src="../icons/icon48.png" alt="">
     <h1>ShotThink</h1>
-    <span class="pill" id="version">v0.9.0</span>
+    <span class="pill" id="version">v1.1.0</span>
     <div class="header-tools">
       <div class="seg" id="langSeg" role="group" aria-label="界面语言">
         <button type="button" data-lang="zh" data-no-i18n aria-pressed="true">中文</button>
@@ -45,6 +45,22 @@
       </div>
     </div>
     <small>截图时工具栏上每个按钮的边长，对应 22 / 26 / 31 像素。默认 22，接近网页正文的行高。</small>
+  </section>
+
+  <section class="panel">
+    <h2>截图快捷键</h2>
+    <div class="row">
+      <span class="k">当前快捷键</span>
+      <span class="v" id="shortcutValue">读取中…</span>
+    </div>
+    <div class="row">
+      <span class="k">修改</span>
+      <button class="primary" id="openShortcuts" style="margin-left:auto">打开 Chrome 快捷键设置</button>
+    </div>
+    <small>
+      快捷键由 Chrome 统一管理，扩展无法自己修改，所以这里会打开 Chrome 的设置页面。
+      默认是 <kbd>Alt+Shift+S</kbd>；<kbd>Ctrl+Shift+S</kbd> 被 Chrome 的「网页另存为」占用，无法使用。
+    </small>
   </section>
 
   <section class="panel">

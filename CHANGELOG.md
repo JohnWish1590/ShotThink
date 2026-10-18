@@ -14,6 +14,21 @@ Chrome only reloads an unpacked extension's code when that number changes.
 
 ---
 
+## [1.1.0] - 2026-10-18
+
+### Added
+
+- **Shortcut section on the options page.** It shows the shortcut that is
+  actually bound and has a button that opens `chrome://extensions/shortcuts`.
+
+  This is a button rather than a plain link because neither obvious route works:
+  an `<a href="chrome://...">` is blocked by the renderer, and MV3 has no
+  `chrome.commands.update`, so an extension cannot change its own shortcut.
+  `chrome.tabs.create` from an extension page is the one route that opens it.
+
+  An unbound command is reported as "not bound" rather than left blank, since a
+  missing shortcut is the most common reason the keyboard route silently fails.
+
 ## [1.0.0] - 2026-10-18
 
 First public release. Free for anyone to download and use.

@@ -114,6 +114,8 @@ h2 {
 .row:last-child { border-bottom: none; }
 .row .k { color: var(--muted); min-width: 170px; flex-shrink: 0; }
 .row .v { margin-left: auto; text-align: right; word-break: break-all; }
+.row .v.err { color: var(--err); }
+.row .v.ok { color: var(--ok); }
 .row a.v { color: var(--accent); text-decoration: none; }
 
 textarea {
@@ -206,6 +208,15 @@ button:disabled { opacity: .5; cursor: default; }
 .job-note.err { color: var(--err); }
 
 small { display: block; margin-top: 10px; color: var(--muted); font-size: 12px; }
+kbd {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text);
+}
 code {
   background: var(--panel-2);
   padding: 1px 6px;

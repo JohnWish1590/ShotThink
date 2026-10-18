@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ShotThink",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Free Chrome extension: capture a region, annotate it, and send it to your own ChatGPT conversation. No API key, no subscription.",
   "permissions": [
     "activeTab",

@@ -153,6 +153,13 @@ globalThis.shotThinkEnglish = {
   // Options page
   '分析规则': 'Analysis instructions',
   '默认规则语言': 'Default rule language',
+  '截图快捷键': 'Capture shortcut',
+  '当前快捷键': 'Current shortcut',
+  '修改': 'Change',
+  '打开 Chrome 快捷键设置': 'Open Chrome shortcut settings',
+  '快捷键由 Chrome 统一管理，扩展无法自己修改，所以这里会打开 Chrome 的设置页面。默认是 Alt+Shift+S；Ctrl+Shift+S 被 Chrome 的「网页另存为」占用，无法使用。':
+    "Chrome manages shortcuts centrally and an extension cannot change its own, so this opens Chrome's settings page. The default is Alt+Shift+S; Ctrl+Shift+S is reserved by Chrome for \"Save page as\" and cannot be used.",
+  '读取中…': 'Reading…',
   '恢复默认规则': 'Reset to default',
   '已恢复默认规则。': 'Default rules restored.',
   '规则已随界面语言更新。': 'Rules updated to match the interface language.',
