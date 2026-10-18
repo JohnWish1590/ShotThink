@@ -15,7 +15,7 @@ No desktop app. No API key. No subscription. No per-request billing.
 </p>
 
 <p align="center">
-  <a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip"><b>Download v1.0.0</b></a>
+  <a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip"><b>Download v1.1.0</b></a>
   &nbsp;·&nbsp;
   <a href="docs/demo.mp4">Watch the 32-second demo</a>
   &nbsp;·&nbsp;
@@ -55,7 +55,7 @@ trade-off seriously — see [Safety](#safety) below.
 The extension is not on the Chrome Web Store — it automates a third-party site,
 which is not a good fit for store review. Install it unpacked:
 
-1. Download [`ShotThink-1.0.0.zip`](https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip) and unzip it.
+1. Download [`ShotThink-1.1.0.zip`](https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip) and unzip it.
 2. Open `chrome://extensions/` in Chrome (or any Chromium browser).
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked** and select the unzipped folder.
