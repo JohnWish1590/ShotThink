@@ -4,6 +4,37 @@ All notable changes to ShotThink. The version here must match
 `manifest.json`; Chrome only reloads an unpacked extension's code when that
 number changes, so every user-visible fix bumps it.
 
+## [0.8.0] - 2026-10-18
+
+### Fixed
+
+- **A completed rename was reported as failed.** The warning said "date naming
+  unfinished" for conversations that were already named correctly. Three causes:
+  the rename never checked the current title before starting, `aria-expanded`
+  was required to consider the menu open (Radix popovers do not always expose
+  it), and completion required both the sidebar row and the document title to
+  match. Now the title is checked on entry and again after waiting for the
+  previous answer; a visible Rename item counts as an open menu; and either the
+  document title, the header, or the sidebar row is accepted as confirmation.
+  `nameDaily` also distinguishes "already named" from "failed", and a closed
+  tab no longer overwrites a successful rename.
+
+- **Explanatory text stayed Chinese in the English UI.** The `<small>` notes and
+  the diagnostics step list had no translation entries, and the toolbar-size
+  note still described the old 22/26/31 → 26/28/31 values. All long notes now
+  have translations.
+
+- **Short translation keys corrupted longer sentences.** `'标签页' → 'Tab'`,
+  `'是' → 'Yes'` and `'权限' → 'Permissions'` were substring-replaced inside
+  longer text, producing output like "这个TabYes在安装扩展之前打开的". Short
+  labels moved to a whole-string-only table.
+
+### Added
+
+- `data-i18n` support. Elements carry their Chinese source text in the
+  attribute, so a sentence containing inline `<code>` or `<kbd>` is translated
+  as a whole instead of piecemeal. The diagnostics step list uses it.
+
 ## [0.7.0] - 2026-10-18
 
 ### Fixed

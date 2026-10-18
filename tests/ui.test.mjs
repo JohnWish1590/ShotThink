@@ -482,6 +482,101 @@ test('capture rules resolve through the language-aware default', async () => {
     'background must pick the default in the current interface language');
 });
 
+/* ----------------------------------------------------- rename false negative */
+
+test('rename checks the current title before doing anything', async () => {
+  // A completed rename was reported as failed because the first signal to fail
+  // was trusted without re-reading the page.
+  const sender = await read('src/sender.js');
+  const fn = sender.slice(sender.indexOf('async function renameDaily'));
+  const body = fn.slice(0, fn.indexOf('\n    await waitFor(()=>!generating()'));
+  assert.match(body, /alreadyNamed\(message\.title\)/, 'must check the title on entry');
+  assert.match(sender, /function alreadyNamed\(title\)/, 'needs a shared title check');
+});
+
+test('rename re-checks after waiting for the previous answer', async () => {
+  const sender = await read('src/sender.js');
+  const fn = sender.slice(sender.indexOf('async function renameDaily'));
+  const afterWait = fn.slice(fn.indexOf('await waitFor(()=>!generating()'));
+  assert.match(afterWait.slice(0, 400), /alreadyNamed\(message\.title\)/,
+    'the title may have been set while waiting');
+});
+
+test('rename accepts either the sidebar row or the header title', async () => {
+  const sender = await read('src/sender.js');
+  const fn = sender.slice(sender.indexOf('function alreadyNamed'));
+  const body = fn.slice(0, fn.indexOf('\n  }'));
+  assert.match(body, /document\.title === title/, 'the document title is a valid signal');
+  assert.match(body, /h1,h2/, 'the header title updates before the sidebar');
+});
+
+test('menu-open detection does not depend on aria-expanded alone', async () => {
+  // Radix popovers do not always expose aria-expanded, and a re-render can
+  // replace the trigger. A visible Rename item is the reliable signal.
+  const sender = await read('src/sender.js');
+  const fn = sender.slice(sender.indexOf('const renameItemVisible'));
+  const body = fn.slice(0, fn.indexOf('const menuOpened'));
+  assert.match(body, /rename\|重命名/, 'must look for the Rename item');
+  const opened = sender.slice(sender.indexOf('const menuOpened='));
+  assert.match(opened.slice(0, 300), /renameItemVisible\(\)/, 'must consult it first');
+});
+
+test('naming failure never implies the screenshot failed', async () => {
+  const daily = await read('src/daily.js');
+  assert.match(daily, /截图已发送；日期命名未完成/, 'the message must say the screenshot was sent');
+  assert.match(daily, /if \(!failure \|\| result\?\.alreadyNamed\)/,
+    'an already-named chat must clear the warning');
+});
+
+test('a closed tab does not overwrite a successful rename', async () => {
+  const daily = await read('src/daily.js');
+  const fn = daily.slice(daily.indexOf('async function nameDaily'));
+  const body = fn.slice(0, fn.indexOf('\n}'));
+  assert.match(body, /result\?\.alreadyNamed/, 'must honour the already-named result');
+});
+
+/* -------------------------------------------------------- i18n coverage */
+
+test('long explanatory text has translations', async () => {
+  const i18n = await read('src/i18n.js');
+  // These are the sentences that stayed Chinese in the English UI because the
+  // translation table had no entry for them.
+  const required = [
+    '单个任务异常会转入人工处理',
+    '检查不会重新发送',
+    '规则会随每张截图一起写入',
+    '截图时工具栏上每个按钮的边长'
+  ];
+  for (const phrase of required) {
+    assert.ok(i18n.includes(phrase), `missing translation key: ${phrase}`);
+  }
+});
+
+test('data-i18n elements are translated as whole sentences', async () => {
+  const i18n = await read('src/i18n.js');
+  assert.match(i18n, /querySelectorAll\('\[data-i18n\]'\)/,
+    'data-i18n must be handled so inline markup does not split a sentence');
+  const html = await read('ui/diagnose.html');
+  assert.match(html, /data-i18n="先试/, 'the step list must use data-i18n');
+});
+
+test('short words are not used as translation keys', async () => {
+  // '标签页' -> 'Tab', '是' -> 'Yes', '权限' -> 'Permissions' were substring
+  // replaced inside longer sentences, producing "这个TabYes" style output.
+  const i18n = await read('src/i18n.js');
+  // They are allowed, but only in the whole-string table.
+  const exactTable = i18n.slice(i18n.indexOf('shotThinkExactOnly'));
+  const exactBody = exactTable.slice(0, exactTable.indexOf('};'));
+  for (const word of ['标签页', '是', '权限']) {
+    assert.ok(exactBody.includes(`'${word}'`), `${word} belongs in the exact-only table`);
+  }
+  // And the substring table must not contain them.
+  const substringTable = i18n.slice(i18n.indexOf('shotThinkEnglish = {'), i18n.indexOf('shotThinkExactOnly'));
+  for (const word of ["'标签页':", "'是':", "'权限':"]) {
+    assert.ok(!substringTable.includes(word), `${word} must not be a substring key`);
+  }
+});
+
 /* ---------------------------------------------------------------- report */
 
 await Promise.all(pendingTests);

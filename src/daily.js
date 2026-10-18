@@ -206,24 +206,51 @@ async function markDailyUncertain(job) {
   await chrome.storage.local.set({ days });
 }
 
+/**
+ * Rename the day's conversation to its date.
+ *
+ * Naming is best-effort and must never imply the screenshot failed: the image is
+ * already delivered by the time this runs. Two things are therefore checked
+ * before reporting a failure:
+ *
+ *   - the tab may have closed or navigated, which says nothing about the title
+ *   - the title may already be correct from an earlier attempt
+ *
+ * A previous version reported "naming failed" for conversations that were
+ * already named, because it trusted the first failed signal and never re-read
+ * the current state.
+ */
 async function nameDaily(job) {
   const { days = {} } = await chrome.storage.local.get('days');
   if (days[job.day]?.named) return;
+
+  // Re-read the entry: another call may have completed while this one waited.
+  const entry = days[job.day] || (days[job.day] = {});
+
   let result;
+  let failure = '';
   try {
+    if (!job.tabId) throw Error('标签页已关闭');
     await waitForTab(job.tabId);
     await chrome.scripting.executeScript({ target: { tabId: job.tabId }, files: ['src/sender.js'] });
     result = await chrome.tabs.sendMessage(job.tabId, { type: 'renameDaily', title: job.day, url: job.url });
     if (!result?.ok) throw Error(result?.error || '网页未确认标题。');
-    days[job.day].named = true;
-    days[job.day].warning = '';
   } catch (error) {
-    days[job.day].warning = `截图已发送；日期命名未完成：${error.message}`;
+    failure = error.message;
   }
+
+  if (!failure || result?.alreadyNamed) {
+    entry.named = true;
+    entry.warning = '';
+  } else {
+    // Keep the reason, but make clear the screenshot itself was delivered.
+    entry.warning = `截图已发送；日期命名未完成：${failure}`;
+  }
+
   await chrome.storage.local.set({ days });
   await mutate(jobs => {
     for (const stored of jobs) {
-      if (stored.day === job.day && stored.status === 'sent') stored.warning = days[job.day].warning || '';
+      if (stored.day === job.day && stored.status === 'sent') stored.warning = entry.warning || '';
     }
   });
 }

@@ -276,7 +276,20 @@
 
   async function renameDaily(message) {
     if(!/^\d{4}-\d{2}-\d{2}$/.test(message.title) || location.href!==message.url) throw Error('日期标题或目标对话不匹配，未改名。');
+
+    /*
+     * Check the current title before doing anything.
+     *
+     * The rename is often already applied by a previous attempt that failed
+     * later in the sequence (menu closed by a re-render, tab navigated, etc.).
+     * Without this the caller reported "naming failed" for a chat that was
+     * already correctly named.
+     */
+    if (alreadyNamed(message.title)) return {ok: true, alreadyNamed: true};
+
     await waitFor(()=>!generating(),150000,'回答尚未结束，暂未改名。');
+    // The title may have been set while we were waiting.
+    if (alreadyNamed(message.title)) return {ok: true, alreadyNamed: true};
     const currentRows=()=>[...document.querySelectorAll('a[href]')].filter(a=>!new URL(a.href).hash && new URL(a.href).pathname===location.pathname && visible(a));
     const rowMenu=link=>{
       for(let row=link,depth=0;row && depth<6;row=row.parentElement,depth++) {
@@ -298,8 +311,19 @@
       if(visible(header))return header;
       return null;
     },10000,'找不到当前聊天的重命名菜单。');
-    const menuOpened=()=>menu.getAttribute('aria-expanded')==='true' ||
-      (menu.getAttribute('aria-expanded')===null && [...document.querySelectorAll('[role="menu"]')].some(visible));
+    /*
+     * Menu-open detection has to be tolerant.
+     *
+     * ChatGPT's menu is a Radix popover whose aria-expanded is not always
+     * present, and a re-render can replace the trigger element after it opened.
+     * The reliable signal is whether a Rename item is on screen, so that is
+     * checked first.
+     */
+    const renameItemVisible=()=>[...document.querySelectorAll('[role="menuitem"], [role="menu"] button')]
+      .some(el=>visible(el) && /^(rename|重命名)$/i.test(readText(el)));
+    const menuOpened=()=>renameItemVisible() ||
+      menu?.getAttribute?.('aria-expanded')==='true' ||
+      [...document.querySelectorAll('[role="menu"]')].some(visible);
     if(!menuOpened()) {
       // Radix conversation menus open on pointerdown, not HTMLElement.click().
       menu.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerType:'mouse'}));
@@ -318,8 +342,26 @@
     const save=[...dialog.querySelectorAll('button')].find(b=>visible(b) && /^(save|保存|确认)$/i.test(readText(b)));
     if(save)save.click();
     else {input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true}));input.dispatchEvent(new KeyboardEvent('keyup',{key:'Enter',code:'Enter',bubbles:true}));}
-    await waitFor(()=>currentLink()?.textContent.trim()===message.title || document.title===message.title,10000,'网页未确认日期标题。');
+    // Accept either signal. The sidebar link can be stale or virtualised while
+    // the document title has already updated, so requiring both was a false
+    // negative that reported a completed rename as failed.
+    await waitFor(()=>alreadyNamed(message.title),10000,'网页未确认日期标题。');
     return {ok:true};
+  }
+
+  /** True when the conversation already carries the target title. */
+  function alreadyNamed(title) {
+    if (document.title === title) return true;
+    // The sidebar row for the current conversation.
+    const rows=[...document.querySelectorAll('a[href]')].filter(a=>{
+      try { return !new URL(a.href).hash && new URL(a.href).pathname===location.pathname && visible(a); }
+      catch { return false; }
+    });
+    if (rows.some(a=>a.textContent.trim()===title)) return true;
+    // The header title, which updates before the sidebar does.
+    const header=[...document.querySelectorAll('h1,h2,[data-testid*="conversation-title"]')]
+      .find(el=>visible(el));
+    return !!header && header.textContent.trim()===title;
   }
 
   const listener=(message, sender, reply) => {

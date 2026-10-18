@@ -22,8 +22,57 @@ globalThis.shotThinkEnglish = {
   '紧凑': 'Compact',
   '标准': 'Standard',
   '宽松': 'Roomy',
-  '截图时工具栏上每个按钮的边长，对应 26 / 28 / 31 像素。显示缩放较高时选“紧凑”。':
-    'Edge length of each toolbar button during capture: 26, 28 or 31 pixels. Pick Compact on a display with high scaling.',
+  '截图时工具栏上每个按钮的边长，对应 22 / 26 / 31 像素。默认 22，接近网页正文的行高。':
+    'Edge length of each toolbar button during capture: 22, 26 or 31 pixels. The default is 22, close to body-text height.',
+  '规则会随每张截图一起写入 ChatGPT 对话，作为该条消息的分析要求。规则语言可以独立于界面语言；手动修改过规则后，切换界面语言不会覆盖你的内容。':
+    'These instructions travel with every screenshot into the ChatGPT conversation. Their language is independent of the interface language, and once you edit them a language switch will not overwrite your text.',
+  '单个任务异常会转入人工处理，不会阻止后续截图。结果不确定时先查看对应对话，避免重复发送。后台聊天标签页请保持打开。':
+    'A single failed task moves to manual review and does not block later captures. If delivery is uncertain, check the conversation before retrying. Keep the background chat tab open.',
+  '检查不会重新发送，只确认消息是否已经出现在对话里。':
+    'Checking never resends; it only confirms whether the message already appears in the conversation.',
+  '截图无法启动时，先在这里看原因。这个页面只读取本扩展自己的状态，不读取网页内容。':
+    "When a capture will not start, look here first. This page reads only the extension's own state, never page content.",
+  '先试“刷新当前标签页”。如果这个标签页是在安装扩展之前打开的，扩展拿不到访问权限，刷新一次就好。':
+    'Try "Reload this tab" first. If the tab was opened before the extension was installed, the extension has no access to it and a reload fixes that.',
+  '确认当前标签页是普通网页（http:// 或 https://）。':
+    'Make sure the current tab is an ordinary web page (http:// or https://).',
+  '确认当前标签页是普通网页（http:// 或 https://）。':
+    'Make sure the current tab is an ordinary web page (http:// or https://).',
+  '先试“刷新当前标签页”。如果这个标签页是在安装扩展之前打开的，扩展拿不到访问权限，刷新一次就好。':
+    'Try "Reload this tab" first. If the tab was opened before the extension was installed, the extension has no access to it and a reload fixes that.',
+  '按 Alt+Shift+S 前先点一下页面，确保焦点在网页上而不是地址栏。':
+    'Before pressing Alt+Shift+S, click on the page so focus is not in the address bar.',
+  '如果仍然没有反应，打开 chrome://extensions/ 看 ShotThink 是否报错。':
+    'If nothing happens, open chrome://extensions/ to see whether ShotThink reports an error.',
+  'chrome://、扩展商店、PDF 查看器、about:、以及扩展自己的设置页都无法截图，这是浏览器限制。':
+    "chrome://, the Web Store, the PDF viewer, about:, and the extension's own pages cannot be captured. That is a browser restriction.",
+  '最近一次失败': 'Last failure',
+  '刷新当前标签页': 'Reload this tab',
+  '清除记录': 'Clear record',
+  '扩展状态': 'Extension status',
+  '扩展版本': 'Version',
+  '扩展后台': 'Background worker',
+  '已运行': 'Running',
+  '当前标签页': 'Current tab',
+  '可截图': 'Capturable',
+  '否 — 浏览器禁止在此类页面注入脚本': 'No — the browser blocks scripts on this kind of page',
+  '还没有失败的截图尝试': 'No failed capture yet',
+  'activeTab 说明': 'About activeTab',
+  '点图标或按快捷键时临时授权当前标签页，不会长期访问所有网站':
+    'Grants the current tab when you click the icon or press the shortcut. No standing access to every site.',
+  '截图快捷键': 'Capture shortcut',
+  'Ctrl+Shift+S 被 Chrome 的“另存为”占用，可能不生效':
+    'Ctrl+Shift+S is reserved by Chrome for "Save page as" and may not fire',
+  '正在检查…': 'Checking…',
+  '没有发现阻止截图的问题。如果点击仍然无反应，刷新标签页后再试。':
+    'Nothing is blocking capture. If clicking still does nothing, reload the tab and try again.',
+  '当前标签页无法截图。请切换到普通网页（http/https）后再试。':
+    'This tab cannot be captured. Switch to a normal web page (http/https) and try again.',
+  '已刷新。等页面加载完成后，点扩展图标或按 Alt+Shift+S 再试一次。':
+    'Reloaded. Once the page finishes loading, click the icon or press Alt+Shift+S.',
+  '截图快捷键没有绑定。点上面的链接设置一个（例如 Alt+Shift+S），或者直接点工具栏图标。':
+    'The capture shortcut is not bound. Use the link above to set one (Alt+Shift+S, for example), or just click the toolbar icon.',
+  '无法读取': 'Could not read',
 
   '点击工具栏图标或按 ': 'Click the toolbar icon, or press ',
   ' 框选网页内容，标注后发送到你自己已登录的 ChatGPT 账号。':
@@ -125,26 +174,17 @@ globalThis.shotThinkEnglish = {
     'When a capture will not start, look here first. This page reads only the extension\'s own state, never page content.',
   '扩展状态': 'Extension status',
   '最近一次失败': 'Last failure',
-  '权限': 'Permissions',
   '扩展版本': 'Version',
   '扩展后台': 'Background worker',
   '已运行': 'Running',
   '当前标签页': 'Current tab',
-  '标签页': 'Tab',
   '可截图': 'Capturable',
-  '是': 'Yes',
   '否 — 浏览器禁止在此类页面注入脚本': 'No — the browser blocks scripts on this kind of page',
-  '时间': 'Time',
-  '原因': 'Reason',
-  '无记录': 'No record',
   '还没有失败的截图尝试': 'No failed capture yet',
   'activeTab 说明': 'About activeTab',
   '点图标或按快捷键时临时授权当前标签页，不会长期访问所有网站':
     'Grants the current tab when you click the icon or press the shortcut. No standing access to every site.',
   '截图快捷键': 'Capture shortcut',
-  '未绑定': 'Not bound',
-  '去设置': 'Set it up',
-  '提示': 'Note',
   'Ctrl+Shift+S 被 Chrome 的“另存为”占用，可能不生效':
     'Ctrl+Shift+S is reserved by Chrome for "Save page as" and may not fire',
   '截图快捷键没有绑定。点上面的链接设置一个（例如 Alt+Shift+S），或者直接点工具栏图标。':
@@ -178,9 +218,31 @@ globalThis.shotThinkSetLanguage = lang => {
   globalThis.shotThinkLang = lang === 'en' ? 'en' : 'zh';
 };
 
+/**
+ * Short labels that must only ever match the whole string.
+ *
+ * These were previously in the substring table, where '是' -> 'Yes' and
+ * '标签页' -> 'Tab' were replaced inside longer sentences, producing output like
+ * "这个TabYes". A whole-string match is safe; a substring match is not.
+ */
+const shotThinkExactOnly = {
+  '标签页': 'Tab',
+  '是': 'Yes',
+  '否': 'No',
+  '权限': 'Permissions',
+  '时间': 'Time',
+  '原因': 'Reason',
+  '提示': 'Note',
+  '未绑定': 'Not bound',
+  '去设置': 'Set it up',
+  '无记录': 'No record'
+};
+
 globalThis.shotThinkText = text => {
   if (globalThis.shotThinkLang === 'zh' || typeof text !== 'string') return text;
-  if (Object.hasOwn(shotThinkEnglish, text)) return shotThinkEnglish[text];
+  const trimmed = text.trim();
+  if (Object.hasOwn(shotThinkEnglish, trimmed)) return shotThinkEnglish[trimmed];
+  if (Object.hasOwn(shotThinkExactOnly, trimmed)) return shotThinkExactOnly[trimmed];
   for (const [zh, en] of Object.entries(shotThinkEnglish).sort((a, b) => b[0].length - a[0].length)) {
     text = text.split(zh).join(en);
   }
@@ -195,6 +257,18 @@ globalThis.shotThinkText = text => {
  * is matched on its own, which is why partial strings are also in the table. */
 globalThis.shotThinkLocalizePage = () => {
   document.documentElement.lang = globalThis.shotThinkLang === 'zh' ? 'zh-CN' : 'en';
+
+  /*
+   * Elements carrying data-i18n hold their Chinese source text in the
+   * attribute, not in a text node. This keeps a sentence intact instead of
+   * splitting it across inline <code> and <kbd> children, which the text walker
+   * would translate piecemeal and get wrong.
+   */
+  for (const element of document.querySelectorAll('[data-i18n]')) {
+    if (element.closest('[data-no-i18n]')) continue;
+    element.textContent = shotThinkText(element.getAttribute('data-i18n'));
+  }
+
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) {
     const node = walker.currentNode;
