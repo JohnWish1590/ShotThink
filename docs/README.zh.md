@@ -6,7 +6,7 @@
 
 不用安装桌面程序，不需要 API Key，不需要额外订阅，不按次计费。
 
-**[观看 30 秒演示](demo.mp4)**
+**[下载 v1.0.0](https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip)** · **[观看 30 秒演示](demo.mp4)**
 
 ---
 
@@ -34,10 +34,11 @@ ShotThink 不调用 OpenAI API。它操作的是你已经登录的 ChatGPT 网�
 
 插件没有上架 Chrome 商店——它会自动操作第三方网站，不适合走商店审核。直接加载：
 
-1. 打开 `chrome://extensions/`
-2. 打开右上角「开发者模式」
-3. 点「加载已解压的扩展程序」，选择本文件夹
-4. 在同一个浏览器里登录 [chatgpt.com](https://chatgpt.com)
+1. 下载 [`ShotThink-1.0.0.zip`](https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip) 并解压
+2. 打开 `chrome://extensions/`
+3. 打开右上角「开发者模式」
+4. 点「加载已解压的扩展程序」，选择解压出来的文件夹
+5. 在同一个浏览器里登录 [chatgpt.com](https://chatgpt.com)
 
 然后点工具栏图标，或按 <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>。
 

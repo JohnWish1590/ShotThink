@@ -12,7 +12,7 @@ No desktop app. No API key. No subscription. No per-request billing.
   <img src="docs/screenshots/06-overlay-annotated.png" alt="Annotating a screenshot" width="720">
 </p>
 
-**[Watch the 30-second demo](docs/demo.mp4)**
+**[Download v1.0.0](https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip)** · **[Watch the 30-second demo](docs/demo.mp4)**
 
 ---
 
@@ -47,10 +47,11 @@ trade-off seriously — see [Safety](#safety) below.
 The extension is not on the Chrome Web Store — it automates a third-party site,
 which is not a good fit for store review. Install it unpacked:
 
-1. Open `chrome://extensions/` in Chrome (or any Chromium browser).
-2. Turn on **Developer mode** (top right).
-3. Click **Load unpacked** and select this folder.
-4. Sign in to [chatgpt.com](https://chatgpt.com) in the same browser profile.
+1. Download [`ShotThink-1.0.0.zip`](https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip) and unzip it.
+2. Open `chrome://extensions/` in Chrome (or any Chromium browser).
+3. Turn on **Developer mode** (top right).
+4. Click **Load unpacked** and select the unzipped folder.
+5. Sign in to [chatgpt.com](https://chatgpt.com) in the same browser profile.
 
 Then click the toolbar icon or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>.
 
