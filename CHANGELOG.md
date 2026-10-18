@@ -1,251 +1,140 @@
 # Changelog
 
-All notable changes to ShotThink. The version here must match
-`manifest.json`; Chrome only reloads an unpacked extension's code when that
-number changes, so every user-visible fix bumps it.
+All notable changes to ShotThink.
 
-## [0.9.0] - 2026-10-18
+Version numbers follow [Semantic Versioning](https://semver.org/):
 
-### Fixed
+- **MAJOR** — incompatible changes that require the user to act (data migration,
+  permission changes, dropped features).
+- **MINOR** — new features, backwards compatible.
+- **PATCH** — bug fixes and internal changes only.
 
-- **Switching the language back did not restore the original text.** Translation
-  overwrote text nodes in place, so English replaced Chinese with no copy kept;
-  switching back left the English strings behind. Every text node and attribute
-  now caches its source on first localisation and always translates from that
-  source, so the switch is a true round trip.
-- **Stale "date naming unfinished" warnings persisted.** The warning came from
-  the rename logic fixed in 0.8.0, but it was already written into the job
-  records and nothing rewrote them. `clearStaleNamingWarnings()` now removes
-  exactly those two old messages on worker start, leaving genuine failures from
-  the current code untouched.
+The version must be bumped in `manifest.json` on every user-visible change:
+Chrome only reloads an unpacked extension's code when that number changes.
 
-### Added
+---
 
-- `nameDaily` now asks the page whether the title is already correct before
-  recording a failure (`verifyTitle`). A rename can succeed and still report an
-  error if the menu closes or the tab navigates afterwards; saying "naming
-  failed" for a chat that is already named is worse than saying nothing.
+## [1.0.0] - 2026-10-18
 
-## [0.8.0] - 2026-10-18
+First public release. Free for anyone to download and use.
 
-### Fixed
+### Capture
 
-- **A completed rename was reported as failed.** The warning said "date naming
-  unfinished" for conversations that were already named correctly. Three causes:
-  the rename never checked the current title before starting, `aria-expanded`
-  was required to consider the menu open (Radix popovers do not always expose
-  it), and completion required both the sidebar row and the document title to
-  match. Now the title is checked on entry and again after waiting for the
-  previous answer; a visible Rename item counts as an open menu; and either the
-  document title, the header, or the sidebar row is accepted as confirmation.
-  `nameDaily` also distinguishes "already named" from "failed", and a closed
-  tab no longer overwrites a successful rename.
+- Region capture of the visible page via `chrome.tabs.captureVisibleTab`,
+  DPR-aware so the output matches what is on screen at any display scaling.
+- Annotation: rectangle, ellipse, arrow, pen, text and mosaic, with undo.
+- Text annotation opens where the mouse is, sized to the selection, and wraps
+  the same way the canvas draws it.
+- Long capture: scrolls the page, samples each viewport, and stitches by exact
+  `scrollY`. Sticky headers are suppressed for the duration so they do not repeat
+  in every slice.
+- Save to a PNG download, copy to the clipboard, or send to ChatGPT.
 
-- **Explanatory text stayed Chinese in the English UI.** The `<small>` notes and
-  the diagnostics step list had no translation entries, and the toolbar-size
-  note still described the old 22/26/31 → 26/28/31 values. All long notes now
-  have translations.
+### Delivery
 
-- **Short translation keys corrupted longer sentences.** `'标签页' → 'Tab'`,
-  `'是' → 'Yes'` and `'权限' → 'Permissions'` were substring-replaced inside
-  longer text, producing output like "这个TabYes在安装扩展之前打开的". Short
-  labels moved to a whole-string-only table.
+- Sends to the ChatGPT account already signed in to the browser. No API key, no
+  OAuth, no cookie access, no subscription — this is why the extension is free.
+- One conversation per day, named `YYYY-MM-DD`, with later captures appended.
+- Selected text can be sent through the right-click menu.
+- Queue survives a closed browser; delivery resumes when Chrome reopens.
 
-### Added
+### Safety
 
-- `data-i18n` support. Elements carry their Chinese source text in the
-  attribute, so a sentence containing inline `<code>` or `<kbd>` is translated
-  as a whole instead of piecemeal. The diagnostics step list uses it.
+- A send whose outcome is unknown is never retried automatically. It is marked
+  `uncertain` and the user checks the conversation. A duplicate screenshot in
+  someone's chat is worse than asking them to look.
+- An existing draft is never overwritten.
+- A previous answer that is still generating pauses the queue instead of being
+  interrupted.
+- Restricted pages (`chrome://`, the Web Store, the PDF viewer) are detected
+  before injection is attempted.
 
-## [0.7.0] - 2026-10-18
+### Interface
 
-### Fixed
-
-- **Committed text reflowed differently from the editor.** The editor wrapped at
-  the viewport edge, then `canvas.fillText` drew a single unwrapped line, so two
-  lines became one. Wrapping is now decided once and shared: the editor grows
-  with the text and wraps only at the selection's right edge, records that width
-  on the annotation as `maxWidth`, and the canvas wraps at exactly the same
-  point. CJK breaks per character, Latin prefers spaces, and a very narrow
-  selection is widened to 120px so text does not wrap every character.
-
-### Changed
-
-- **Editor frame follows the annotation colour** (`border: 1px solid
-  currentColor`) instead of a fixed blue. The frame now previews the colour that
-  will be committed. The fill dropped to 6% black so it locates the caret
-  without tinting the content, and a white outer ring keeps the frame visible on
-  dark backgrounds.
-
-### Added
-
-- **Default analysis rules in both languages** (`src/rules.js`). Previously the
-  options box was simply empty on first run, and the only built-in rules lived
-  in the context-menu path.
-- **Rule language switch** next to the heading, independent of the interface
-  language. Defaults to the interface language; a Chinese UI can hold English
-  instructions and vice versa.
-- **Reset to default** button.
-- Rule bodies the user has edited are never overwritten: switching the interface
-  language only updates the box while it still holds a built-in default, and the
-  rule-language switch keeps edited text and says so.
-
-## [0.6.0] - 2026-10-18
-
-### Fixed
-
-- **The editor opened at a fixed centre, not where the mouse was.** The pointer
-position is now tracked on every move, so choosing the text tool opens the
-editor at the spot the user is pointing at. Falls back to the selection centre,
-then the viewport centre.
-- **The editor was invisible on a white page.** Removing the frame in 0.5.0 went
-too far: with no border and no fill, the caret could not be found on light
-content. The editor now has a thin blue border plus a dark outer ring, so it
-reads on both light and dark backgrounds, with a very faint fill (10% grey) to
-locate the caret without covering the content underneath.
+- Chinese and English, defaulting to the browser language with a manual override.
+- Light, dark, and follow-system themes.
+- Toolbar size: 22 / 26 / 31 px.
+- Annotation colour and font size are remembered between captures.
 
 ### Notes
 
-- The editor is kept off the toolbar and the colour panel, and clamped inside
-the viewport, so it never opens on top of the buttons or gets clipped.
-- This is a deliberate middle ground between 0.4.0's opaque dark box (which
-covered the page) and 0.5.0's fully transparent editor (which had no visible
-caret).
+- Distribution is self-hosted / unpacked. The extension automates a third-party
+  site, so store review is not the right channel for it.
+- Requires a Chromium browser. Firefox is not supported.
 
-## [0.5.0] - 2026-10-18
+---
 
-### Fixed
+## Development history before 1.0.0
 
-- **Picking the text tool now opens the editor immediately.** Choosing T used to
-only arm the tool; the user then had to click the canvas, which was not
-obvious. The editor now opens at the centre of the selection (or the viewport
-when there is none) with the caret already in it, so typing can start at once.
-Clicking elsewhere while the tool is active still moves it.
-- **Canvas text sat too low.** `textBaseline` was `'top'`, so the drawn text
-hung below the point the user clicked. It is now `'middle'`, matching the
-editor's own vertical centring, which also stops the text jumping when the
-editor is committed.
-- **The editor was centred on its corner, not on the click.** The box is now
-centred on the point in both axes, and the commit records that point from
-`dataset.originX/Y` rather than from the box's top-left corner.
+These were internal iterations, not public releases. They are recorded here
+because the changelog is also the design history.
 
-### Changed
+### 0.9.0
 
-- **Text editor restyled: transparent, frameless, centred.** The white-framed
-dark box from 0.4.0 was rejected — it covered the content underneath and read
-as a dialog rather than an annotation. The editor is now plain bold text at the
-annotation colour with a native caret, so what is typed looks like what will be
-committed. `line-height: 1` makes the textarea's line box match the canvas
-line box exactly.
+- Fixed: switching the interface language back did not restore the original
+  text, because translation overwrote text nodes in place. Sources are now
+  cached and every call translates from the cache.
+- Fixed: stale "date naming unfinished" warnings persisted on old job records.
+- Added: `nameDaily` asks the page whether the title is already correct before
+  recording a failure.
 
-## [0.4.0] - 2026-10-18
+### 0.8.0
 
-### Fixed
+- Fixed: a completed rename was reported as failed. The title is now checked on
+  entry and again after waiting; a visible Rename item counts as an open menu;
+  the document title, header, or sidebar row each confirm completion.
+- Fixed: explanatory notes stayed Chinese in the English UI.
+- Fixed: short translation keys (`标签页`, `是`, `权限`) were substring-replaced
+  inside longer sentences. They moved to a whole-string-only table.
+- Added: `data-i18n` so a sentence containing inline markup translates as a
+  whole.
 
-- **The text colour in the editor did not match what got committed.** Two bugs
-combined: clicking a swatch updated `state.color` but never touched the open
-`<textarea>`, and `commitTextInput` then read `state.color` instead of what the
-box displayed. So the editor showed red, and changing to blue before pressing
-Enter saved blue. The editor now owns its colour: swatches push it onto the
-element and the commit reads it back from `dataset.color`.
-- **The first click with the text tool did nothing.** Opening the editor required
-three conditions — a selection, the text tool active, and then a click inside
-the selection. Now the text tool works before any region exists: pick T, click,
-type.
-- **Characters rendered with gaps between them.** `white-space: pre` preserved
-the soft-wrap breaks a textarea inserts. Changed to `pre-wrap`, and the box is
-measured with the same font the canvas uses.
+### 0.7.0
 
-### Changed
+- Fixed: committed text reflowed differently from the editor. The editor records
+  its wrap width and the canvas wraps at the same point.
+- Changed: the editor frame follows the annotation colour instead of a fixed
+  blue.
+- Added: default analysis rules in both languages, a rule-language switch
+  independent of the interface language, and a reset button.
 
-- **Text editor restyled to WeChat's pattern:** white frame, dark translucent
-fill, annotation colour as the text colour. The dark fill is what makes it
-readable over both white and black page content; the white frame carries the
-identity; the coloured text shows exactly what will be committed.
-- **Toolbar default is now 22px** (was 31). Options are 22 / 26 / 31. Live
-feedback across three rounds: 31 read as oversized, 26 was still large, 22 puts
-the icon near body-text height. Icons remain 52% of the button (11px at 22px).
-- **Annotation font sizes** are now `[12, 16, 20, 24, 32, 40, 48]` with 16px as
-the default, matching ordinary body text. Mouse4's 24 was sized for a desktop
-tool.
-- **Colour and font size are remembered** between captures (`annotateColor`,
-`annotateFontSize`), with black as the first-run colour.
+### 0.6.0
 
-## [0.3.0] - 2026-10-18
+- Fixed: the editor opened at a fixed centre instead of the mouse position.
+- Fixed: the editor was invisible on a white page; a thin frame and a 6% fill
+  were restored.
 
-### Added
+### 0.5.0
 
-- **Language switch.** Chinese and English, with the browser language as the
-default and an explicit override stored as `uiLanguage`. Both extension pages
-share the switch via `ui/prefs.js`; the language buttons themselves are marked
-`data-no-i18n` so "中文" stays readable in English mode.
-- **Theme switch.** Light, dark, and follow-system. Tokens live in
-`ui/base.css` under `:root` and `:root[data-theme="light"]`; `system` is
-resolved in JS against `prefers-color-scheme` with a live listener.
-- **Toolbar size setting.** 26 / 28 / 31 px, defaulting to 28. `--st-scale` now
-carries the button edge length directly, so every other dimension is a
-fraction of it and one setting drives the whole toolbar. Verified: 26→26px,
-28→28px, 31→31px, icon always 52% of the button.
+- Fixed: picking the text tool opens the editor immediately, with the caret in
+  it.
+- Fixed: canvas text sat too low (`textBaseline` was `'top'`).
+- Changed: the editor became transparent and centred.
 
-### Fixed
+### 0.4.0
 
-- **The send-history row was unreadable.** The "open chat" link sat in the same
-flex container as the filename, so it collapsed into a one-character-wide
-column (see the 0.2.0 screenshot). Job rows are now wrapping block children and
-the link never shrinks.
-- **The options page still advertised `Ctrl+Shift+S`** in its intro text after
-the shortcut moved to `Alt+Shift+S`.
-- **Extension pages reported the wrong reason.** Clicking the icon on
-`chrome-extension://…/options.html` said "this page cannot be captured". It now
-says the extension's own pages cannot be captured, which is the actual rule.
-- **Translated paragraphs containing inline markup were skipped.** The intro
-sentence has a `<kbd>` inside it, so the text walker never matched it. Partial
-strings are now in the translation table and each text node is matched alone.
+- Fixed: the text colour in the editor did not match what was committed.
+- Fixed: characters rendered with gaps (`white-space: pre` preserved soft wraps).
+- Changed: toolbar default 22px; annotation font sizes `[12…48]` defaulting to
+  16px; colour and size remembered.
 
-### Changed
+### 0.3.0
 
-- Options and diagnostics share `ui/base.css` and `ui/prefs.js` instead of
-duplicating their theme and language logic.
+- Added: language switch, theme switch, toolbar size setting.
+- Fixed: the send-history row collapsed the "open chat" link to one character.
 
-## [0.2.0] - 2026-10-18
+### 0.2.0
 
-### Fixed
+- Fixed: a failed capture produced no visible response. Failures now set a badge
+  and are surfaced on a diagnostics page.
+- Fixed: `.st-toolbar { display: flex }` overrode `[hidden]`, so the toolbar and
+  colour panel appeared before any selection.
+- Fixed: the toolbar was oversized on a scaled display.
+- Fixed: `Ctrl+Shift+S` is reserved by Chrome for "Save page as"; the default
+  became `Alt+Shift+S`.
 
-- **Capture never started.** A failed capture produced no visible response at
-  all: the fallback used `alert()` injected into the page, which needs the very
-  permission that had just been denied. A failure now always shows a red `!`
-  badge, a tooltip with the reason, and an entry the new diagnostics page reads.
-- **Toolbar appeared before any selection.** `.st-toolbar { display: flex }`
-  overrides the browser default `[hidden] { display: none }`, so the `hidden`
-  attribute did nothing. The toolbar now starts hidden and appears only after a
-  region is dragged out, matching Mouse4.
-- **Colour panel was always visible.** Same `display: flex` vs `[hidden]`
-  problem. It now appears only after a drawing tool is selected, and the size
-  selector only for text — as `set_draw_mode` does in Mouse4.
-- **Toolbar was too large on a scaled display.** The buttons were hard-coded at
-  42 CSS px. Mouse4's `adapt_to_screen` scales by `logicalDotsPerInch / 144`,
-  which in CSS pixels resolves to a constant `46 * 96 / 144 = 30.7` regardless
-  of display scaling. Measured: 31 CSS px at devicePixelRatio 1, 1.5, 1.875 and
-  2.
-- **`Ctrl+Shift+S` did not work.** Chrome reserves it for "Save page as", so the
-  suggested key was silently dropped. The default is now `Alt+Shift+S`. MV3 has
-  no `chrome.commands.update`, so the diagnostics page links to
-  `chrome://extensions/shortcuts` when the command is unbound.
+### 0.1.0
 
-### Added
-
-- `ui/diagnose.html`: shows the extension version, whether the current tab is
-  capturable, the last recorded failure, the actually-bound shortcut, and the
-  granted permissions. Includes a one-click "reload this tab" button, which is
-  the real fix for the most common cause of a silent failure.
-- Restricted URLs (`chrome://`, the Web Store, `about:`, the PDF viewer) are
-  detected up front from the tab URL instead of being discovered by a failed
-  injection.
-
-## [0.1.0] - 2026-10-18
-
-### Added
-
-- Initial scaffold: MV3 manifest, ported queue and daily routing from Mouse4,
-  IndexedDB image store, region capture with the full Mouse4 annotation set,
-  Mouse4-style toolbar, and scroll-stitched long capture.
+- Initial scaffold: MV3 manifest, queue and daily routing ported from Mouse4,
+  IndexedDB image store, region capture with the full annotation set, Mouse4-style
+  toolbar, scroll-stitched long capture.

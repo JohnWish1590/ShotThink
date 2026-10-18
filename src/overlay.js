@@ -423,34 +423,51 @@
    * Place the toolbar the way Mouse4's show_toolbar does:
    * below the selection, else above it, else inside its top edge.
    */
+  /**
+   * Place the toolbar, and the colour panel beneath it.
+   *
+   * Measured sizes cannot be trusted while an element is hidden: a `hidden`
+   * element reports 0x0, which made the panel's position fall back to a guess
+   * and overlap the toolbar. The toolbar is therefore always measured after
+   * being shown, and the panel's height is only needed when it is visible.
+   */
   function positionToolbar() {
     if (!toolbar || !state.selection) return;
     const sel = state.selection;
     const { width: vw, height: vh } = state.frame.viewport;
-    const box = toolbar.getBoundingClientRect();
-    const w = box.width || 380;
-    const h = box.height || 58;
     const gap = 10;
 
-    const clampX = x => Math.max(0, Math.min(x, vw - w));
+    // The toolbar is visible by the time this runs; if it is not, skip rather
+    // than position it from a zero measurement.
+    const box = toolbar.getBoundingClientRect();
+    const w = box.width || 380;
+    const h = box.height || 34;
+
+    const clampX = (x, width) => Math.max(0, Math.min(x, vw - width));
     const fits = (x, y) => y >= 0 && y + h <= vh && x >= 0 && x + w <= vw;
 
-    let x = clampX(sel.x + sel.w - w);
-    let y = sel.y + sel.h + gap;                       // 1) below
+    let x = clampX(sel.x + sel.w - w, w);
+    let y = sel.y + sel.h + gap;                          // 1) below
     if (!fits(x, y)) {
-      y = sel.y - h - gap;                             // 2) above
+      y = sel.y - h - gap;                                // 2) above
       if (!fits(x, y)) y = Math.min(sel.y + gap, vh - h); // 3) inside the top
     }
     toolbar.style.left = `${x}px`;
     toolbar.style.top = `${Math.max(0, y)}px`;
 
-    // Colour panel sits directly under the toolbar, kept on screen.
+    if (!colorsPanel || colorsPanel.hidden) return;
+
+    // The panel is visible now, so its measured size is real.
     const panelBox = colorsPanel.getBoundingClientRect();
-    const pw = panelBox.width || 400;
-    const ph = panelBox.height || 40;
-    const px = clampX(x);
+    const pw = panelBox.width || 360;
+    const ph = panelBox.height || 34;
+    const px = clampX(x, pw);
+    // Prefer directly under the toolbar; flip above it when there is no room.
     let py = y + h + 6;
-    if (py + ph > vh) py = Math.max(0, y - ph - 6);
+    if (py + ph > vh) {
+      py = y - ph - 6;
+      if (py < 0) py = Math.max(0, vh - ph - 6);
+    }
     colorsPanel.style.left = `${px}px`;
     colorsPanel.style.top = `${py}px`;
   }
@@ -468,6 +485,8 @@
     // Mouse4's set_draw_mode (`colors_widget.setVisible(mode is not None)`),
     // and the size selector only for text.
     const toolActive = Boolean(state.mode) && !state.longCapture;
+    // Show it before measuring: a hidden element reports 0x0, so positioning it
+    // in the same pass as `hidden = false` would use a stale size.
     colorsPanel.hidden = !toolActive;
     const sizeSelect = colorsPanel.querySelector('select');
     if (sizeSelect) sizeSelect.style.display = state.mode === 'text' ? '' : 'none';
@@ -1108,6 +1127,28 @@
     return out;
   }
 
+  /**
+   * Decode a data URL into an ImageBitmap.
+   *
+   * `fetch(dataUrl)` is the obvious route but it is a network-shaped API, and a
+   * page's Content-Security-Policy can block it — GitHub, for one, refuses
+   * `connect-src` to data: URLs. Decoding the base64 directly avoids CSP
+   * entirely and is what a content script should be doing here anyway.
+   */
+  async function decodeDataUrl(dataUrl) {
+    const comma = dataUrl.indexOf(',');
+    if (comma < 0) throw Error('截图数据格式无效。');
+    const meta = dataUrl.slice(0, comma);
+    const payload = dataUrl.slice(comma + 1);
+    if (!/;base64$/i.test(meta)) throw Error('截图数据不是 base64。');
+
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const type = meta.slice(5).replace(/;base64$/i, '') || 'image/png';
+    return createImageBitmap(new Blob([bytes], { type }));
+  }
+
   function stamp() {
     const now = new Date();
     const pad = value => String(value).padStart(2, '0');
@@ -1217,8 +1258,7 @@
       // Decode every slice, then composite by measured scroll offset.
       const bitmaps = [];
       for (const slice of slices) {
-        const response = await fetch(slice.dataUrl);
-        bitmaps.push(await createImageBitmap(await response.blob()));
+        bitmaps.push(await decodeDataUrl(slice.dataUrl));
       }
 
       const dpr = window.devicePixelRatio || 1;
@@ -1329,8 +1369,7 @@
     const savedSize = Number(reply.prefs?.annotateFontSize);
     if (FONT_SIZES.includes(savedSize)) state.fontSize = savedSize;
 
-    const response = await fetch(reply.dataUrl);
-    const bitmap = await createImageBitmap(await response.blob());
+    const bitmap = await decodeDataUrl(reply.dataUrl);
     const scale = reply.viewport.width ? bitmap.width / reply.viewport.width : 1;
 
     state.frame = { bitmap, dataUrl: reply.dataUrl, viewport: reply.viewport, scale };

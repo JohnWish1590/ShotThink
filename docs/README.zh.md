@@ -1,24 +1,85 @@
-# ShotThink
+# ShotThink 中文说明
 
-Capture, annotate, and send a browser screenshot into your own ChatGPT conversation.
+**截图，然后思考。**
 
-## 中文说明
+一个免费的 Chrome 插件：框选网页内容，标注后发送到你自己已登录的 ChatGPT 对话。
 
-ShotThink 是一个纯 Chrome 插件：点击扩展图标（或按 `Alt+Shift+S`）框选网页内容，标注后自动发送到你自己的 ChatGPT 账号，按日期每天一个对话。
+不用安装桌面程序，不需要 API Key，不需要额外订阅，不按次计费。
 
-不安装任何桌面程序，不需要 API Key，翻译也直接由已连接的 ChatGPT 账号完成。
+**[观看 30 秒演示](demo.mp4)**
 
-它是 [ClipThink](https://github.com/JohnWish1590/clipthink) 的姊妹产品：ClipThink 思考你复制的内容，ShotThink 思考你看到的内容。
+---
 
-## 当前状态
+## 为什么免费
 
-**骨架阶段。** 目前只有清单文件、项目结构和设计文档。截图遮罩层、标注层和长截图尚未实现。
+ShotThink 不调用 OpenAI API。它操作的是你已经登录的 ChatGPT 网页——找到上传控件、把分析规则写进编辑器、点发送。
 
-- 设计方案：[docs/DESIGN.md](docs/DESIGN.md)
-- 范围边界：[docs/SCOPE.md](docs/SCOPE.md)
+所以你用的是什么额度，它就用什么额度。不需要申请 key，不需要充值。
 
-## 与 Mouse4 的关系
+代价是：能否发送成功取决于 ChatGPT 的页面结构，以及后台标签页是否保持打开。工具里所有的失败保护都是为了应对这个代价。
 
-发送链路（上传、写规则、按日期归档、失败保护）直接复用 Mouse4 的 Chrome 插件代码；被替换掉的只有"截图"这一步和整个 Native Messaging 桥。
+## 能做什么
 
-Mouse4 覆盖整个桌面，ShotThink 只覆盖浏览器内容。两者不是替代关系。
+| | |
+|---|---|
+| **区域截图** | 按显示缩放自动适配，输出和屏幕上看到的一致 |
+| **标注** | 矩形、椭圆、箭头、画笔、文字、马赛克，支持撤销 |
+| **文字** | 在鼠标位置弹出，到选区边缘才折行，所见即所得 |
+| **长截图** | 自动滚动拼接，粘性页头会被临时隐藏 |
+| **发送** | 按日期每天一个对话，标题为 `YYYY-MM-DD` |
+| **选中文字** | 右键「发送到AI」，不读取剪贴板 |
+| **界面** | 中英文（跟随浏览器语言，可手动切换）、亮/暗/跟随系统、三档工具栏尺寸 |
+
+## 安装
+
+插件没有上架 Chrome 商店——它会自动操作第三方网站，不适合走商店审核。直接加载：
+
+1. 打开 `chrome://extensions/`
+2. 打开右上角「开发者模式」
+3. 点「加载已解压的扩展程序」，选择本文件夹
+4. 在同一个浏览器里登录 [chatgpt.com](https://chatgpt.com)
+
+然后点工具栏图标，或按 <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>。
+
+> `Ctrl+Shift+S` 被 Chrome 的「网页另存为」占用，用不了。要改快捷键去 `chrome://extensions/shortcuts`。
+
+## 使用
+
+1. **框选** — 点图标或按快捷键，拖出区域。工具栏出现在选区下方。
+2. **标注** — 选工具直接画。颜色和字号会记住上次的选择。
+3. **发送** — 点绿色 **AI** 按钮，图片自动存进当天的对话。
+
+负责发送的 ChatGPT 标签页在后台运行，不需要切到前台，但要保持打开。
+
+## 安全设计
+
+这些不是补丁，是这个工具能用的前提：
+
+- **结果不确定时绝不自动重发。** 标记为「待核对」让你去确认。在你和 AI 的对话里多出一张截图，比让你多看一眼更糟。
+- **已有草稿不会被覆盖。**
+- **上一条回答没结束时队列会等待**，不会打断。
+- **受限页面提前识别**：`chrome://`、扩展商店、PDF 查看器、插件自己的页面都截不了，工具会明确说明而不是静默失败。
+
+出问题时工具栏图标会显示红色 **!**，诊断页会告诉你原因。
+
+## 权限
+
+只申请必要的权限：`activeTab`（只在你点击时临时授权当前标签页）、`scripting`、`storage`、`contextMenus`、`alarms`，以及 `chatgpt.com` 的访问权。
+
+没有 `<all_urls>`，没有 `debugger`，不读取 Cookie，除 ChatGPT 页面本身的请求外不发起任何网络请求。
+
+## 和 Mouse4 的关系
+
+发送链路（上传、写规则、按日期归档、失败保护）复用 [Mouse4](https://github.com/JohnWish1590/Mouse4) 的 Chrome 插件代码。Mouse4 是同一个作者的 Windows 截图工具。
+
+Mouse4 覆盖整个桌面，能贴图、能截微信和 Excel；ShotThink 只覆盖浏览器内容，但不需要安装任何东西。
+
+两者不是替代关系。
+
+## 姊妹产品
+
+[ClipThink](https://github.com/JohnWish1590/clipthink) 思考你复制的内容，ShotThink 思考你看到的内容。
+
+## 许可
+
+MIT
