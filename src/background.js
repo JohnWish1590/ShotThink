@@ -56,20 +56,92 @@ async function queueIsPaused() {
 
 const CAPTURE_MESSAGE = 'shotthink:capture';
 
+/*
+ * Pages where no content script can ever run. Detected up front so the user
+ * gets a specific message instead of a silent no-op.
+ */
+function isRestrictedUrl(url = '') {
+  return /^(chrome|edge|about|devtools|view-source|chrome-extension|chrome-untrusted|chrome-search):/i.test(url) ||
+    /^https:\/\/chromewebstore\.google\.com\//i.test(url) ||
+    /^https:\/\/chrome\.google\.com\/webstore\//i.test(url);
+}
+
 chrome.action.onClicked.addListener(tab => {
   if (!tab?.id) return;
-  void startCapture(tab.id);
+  void startCapture(tab.id, tab.url);
 });
 
 if (chrome.commands?.onCommand) {
   chrome.commands.onCommand.addListener((command, tab) => {
     if (command !== 'capture') return;
-    const id = tab?.id;
-    if (id) void startCapture(id);
+    if (tab?.id) { void startCapture(tab.id, tab.url); return; }
+    // Some Chrome versions omit the tab argument for commands.
+    void chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+      const current = tabs[0];
+      if (current?.id) void startCapture(current.id, current.url);
+    });
   });
 }
 
-async function startCapture(tabId) {
+/**
+ * Show a message the user can actually see.
+ *
+ * The previous version fell back to `alert()` injected into the page, which
+ * needs the very permission that just failed, so a failure produced nothing at
+ * all on screen. The badge and the stored status do not need page access.
+ */
+async function reportCaptureFailure(tabId, message) {
+  try {
+    await chrome.action.setBadgeText({ tabId, text: '!' });
+    await chrome.action.setBadgeBackgroundColor({ tabId, color: '#D98585' });
+    await chrome.action.setTitle({ tabId, title: `ShotThink: ${message}` });
+  } catch {
+    // setBadgeText also fails on restricted tabs; the status below still lands.
+  }
+  await chrome.storage.local.set({ lastCaptureError: { message, at: Date.now() } });
+
+  // Best-effort in-page notice; harmless if the page cannot be scripted.
+  await chrome.scripting
+    .executeScript({
+      target: { tabId },
+      func: text => {
+        const box = document.createElement('div');
+        box.textContent = text;
+        box.setAttribute('style', [
+          'position:fixed', 'top:24px', 'left:50%', 'transform:translateX(-50%)',
+          'z-index:2147483647', 'padding:12px 20px', 'border-radius:10px',
+          'background:rgba(24,24,27,0.97)', 'color:#E5E5EA',
+          'font:600 14px/1.5 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif',
+          'border:1px solid rgba(255,255,255,0.16)', 'box-shadow:0 10px 30px rgba(0,0,0,.45)'
+        ].join(';'));
+        document.documentElement.append(box);
+        setTimeout(() => box.remove(), 4000);
+      },
+      args: [message]
+    })
+    .catch(() => {});
+}
+
+async function clearCaptureFailure(tabId) {
+  try {
+    await chrome.action.setBadgeText({ tabId, text: '' });
+    await chrome.action.setTitle({ tabId, title: 'ShotThink — capture' });
+  } catch {}
+}
+
+async function startCapture(tabId, tabUrl) {
+  let url = tabUrl;
+  if (!url) {
+    try {
+      url = (await chrome.tabs.get(tabId))?.url;
+    } catch {}
+  }
+
+  if (isRestrictedUrl(url)) {
+    await reportCaptureFailure(tabId, shotThinkText('此页面无法截图。'));
+    return;
+  }
+
   try {
     // i18n.js must land before overlay.js: the overlay calls shotThinkText()
     // while building its toolbar, and would otherwise throw on first paint.
@@ -78,17 +150,30 @@ async function startCapture(tabId) {
       files: ['src/i18n.js', 'src/overlay.js']
     });
     const tab = await chrome.tabs.get(tabId);
-    await chrome.tabs.sendMessage(tabId, { type: CAPTURE_MESSAGE, windowId: tab.windowId });
+    const reply = await chrome.tabs.sendMessage(tabId, {
+      type: CAPTURE_MESSAGE,
+      windowId: tab.windowId
+    });
+    if (reply?.ok) {
+      await clearCaptureFailure(tabId);
+    } else {
+      await reportCaptureFailure(tabId, reply?.error || shotThinkText('截图失败，请刷新页面后重试。'));
+    }
   } catch (error) {
-    // chrome:// pages, the Web Store, and the PDF viewer reject injection.
+    const raw = error?.message || '';
+    // Distinguish the two very different causes. "Cannot access contents" on a
+    // normal http(s) page almost always means the activeTab grant was not
+    // applied — the user clicked before the page finished loading, the tab was
+    // opened before the extension was installed, or the command fired without
+    // a tab argument. Telling them "this page cannot be captured" would be
+    // wrong and unhelpful.
+    const message = /Cannot access contents|must request permission/i.test(raw)
+      ? shotThinkText('还没有权限访问这个标签页。请刷新页面，或先点一下页面再按快捷键。')
+      : /permission/i.test(raw)
+        ? shotThinkText('此页面无法截图。')
+        : `${shotThinkText('截图失败，请刷新页面后重试。')} ${raw}`;
     console.error('ShotThink capture could not start', error);
-    await chrome.scripting
-      .executeScript({
-        target: { tabId },
-        func: message => alert(message),
-        args: [shotThinkText('此页面无法截图。')]
-      })
-      .catch(() => {});
+    await reportCaptureFailure(tabId, message);
   }
 }
 

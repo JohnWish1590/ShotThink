@@ -158,6 +158,10 @@ $('resume').addEventListener('click', async () => {
   void render();
 });
 
+$('diagnose').addEventListener('click', () => {
+  void chrome.tabs.create({ url: chrome.runtime.getURL('ui/diagnose.html') });
+});
+
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.jobs || changes.queuePaused)) void render();
 });

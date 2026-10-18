@@ -13,6 +13,7 @@ const shotThinkEnglish = {
   '准备截图…': 'Preparing screenshot…',
   '截图失败，请刷新页面后重试。': 'Capture failed. Reload the page and try again.',
   '此页面无法截图。': 'This page cannot be captured.',
+  '还没有权限访问这个标签页。请刷新页面，或先点一下页面再按快捷键。': 'No access to this tab yet. Reload the page, or click on it before pressing the shortcut.',
   '页面正在滚动，请稍候。': 'The page is still scrolling. Please wait.',
 
   // Annotation

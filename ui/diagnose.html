@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShotThink 诊断</title>
+<link rel="icon" href="../icons/icon32.png">
+<style>
+  :root {
+    --bg:#18181b; --panel:#232327; --line:rgba(255,255,255,.12);
+    --text:#e5e5ea; --muted:#9a9aa2; --accent:#2997ff;
+    --ok:#68dc8c; --warn:#e4bd64; --err:#d98585;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 20px 60px;background:var(--bg);color:var(--text);
+       font:14px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  main{max-width:760px;margin:0 auto}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  header img{width:40px;height:40px}
+  h1{margin:0;font-size:19px;font-weight:600}
+  h2{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.05em;
+     text-transform:uppercase;color:var(--muted)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+         padding:18px 20px;margin-bottom:16px}
+  .row{display:flex;align-items:baseline;gap:10px;padding:7px 0;
+       border-bottom:1px solid var(--line);font-size:13px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--muted);min-width:180px}
+  .row .v{margin-left:auto;text-align:right;word-break:break-all}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  button{background:rgba(255,255,255,.09);color:var(--text);border:1px solid var(--line);
+         border-radius:10px;padding:8px 16px;font:inherit;cursor:pointer}
+  button:hover{background:rgba(255,255,255,.14)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#04121f;font-weight:600}
+  ol{margin:10px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
+  li{margin-bottom:6px}
+  code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:5px;
+       font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .verdict{margin-top:14px;padding:12px 14px;border-radius:10px;font-size:13px;
+           border:1px solid var(--line);background:rgba(255,255,255,.04)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="../icons/icon48.png" alt="">
+    <h1>ShotThink 诊断</h1>
+  </header>
+  <p style="color:var(--muted);margin:0 0 20px">
+    截图无法启动时，先在这里看原因。这个页面只读取本扩展自己的状态，不读取网页内容。
+  </p>
+
+  <section class="panel">
+    <h2>扩展状态</h2>
+    <div id="checks"></div>
+    <div class="verdict" id="verdict">正在检查…</div>
+  </section>
+
+  <section class="panel">
+    <h2>最近一次失败</h2>
+    <div id="lastError" class="row"><span class="k">无记录</span></div>
+    <div style="margin-top:14px">
+      <button class="primary" id="reload">刷新当前标签页</button>
+      <button id="clear">清除记录</button>
+    </div>
+    <ol>
+      <li><strong>先试“刷新当前标签页”。</strong>如果这个标签页是在安装扩展之前打开的，扩展拿不到访问权限，刷新一次就好。</li>
+      <li>确认当前标签页是普通网页（<code>http://</code> 或 <code>https://</code>）。</li>
+      <li><code>chrome://</code>、扩展商店、PDF 查看器、<code>about:</code> 页面都无法截图，这是浏览器限制。</li>
+      <li>按 <code>Ctrl+Shift+S</code> 前先点一下页面，确保浏览器把焦点给的是网页而不是地址栏。</li>
+      <li>如果仍然没有反应，打开 <code>chrome://extensions/</code> 看 ShotThink 是否报错。</li>
+    </ol>
+  </section>
+
+  <section class="panel">
+    <h2>权限</h2>
+    <div id="perms"></div>
+  </section>
+</main>
+<script src="../src/i18n.js"></script>
+<script src="diagnose.js"></script>
+</body>
+</html>
