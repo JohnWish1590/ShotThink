@@ -4,6 +4,32 @@ All notable changes to ShotThink. The version here must match
 `manifest.json`; Chrome only reloads an unpacked extension's code when that
 number changes, so every user-visible fix bumps it.
 
+## [0.5.0] - 2026-10-18
+
+### Fixed
+
+- **Picking the text tool now opens the editor immediately.** Choosing T used to
+only arm the tool; the user then had to click the canvas, which was not
+obvious. The editor now opens at the centre of the selection (or the viewport
+when there is none) with the caret already in it, so typing can start at once.
+Clicking elsewhere while the tool is active still moves it.
+- **Canvas text sat too low.** `textBaseline` was `'top'`, so the drawn text
+hung below the point the user clicked. It is now `'middle'`, matching the
+editor's own vertical centring, which also stops the text jumping when the
+editor is committed.
+- **The editor was centred on its corner, not on the click.** The box is now
+centred on the point in both axes, and the commit records that point from
+`dataset.originX/Y` rather than from the box's top-left corner.
+
+### Changed
+
+- **Text editor restyled: transparent, frameless, centred.** The white-framed
+dark box from 0.4.0 was rejected — it covered the content underneath and read
+as a dialog rather than an annotation. The editor is now plain bold text at the
+annotation colour with a native caret, so what is typed looks like what will be
+committed. `line-height: 1` makes the textarea's line box match the canvas
+line box exactly.
+
 ## [0.4.0] - 2026-10-18
 
 ### Fixed

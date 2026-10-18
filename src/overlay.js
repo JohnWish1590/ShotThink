@@ -229,28 +229,33 @@
       }
       .st-swatch[data-active="1"] { outline: 2px solid #fff; outline-offset: 1px; }
 
-      /* Inline text entry, styled after WeChat's screenshot tool: a white
-         frame on a dark translucent fill with the annotation colour as the text
-         colour. The dark fill is what makes it readable over both white and
-         black page content, and the outer shadow keeps the white frame visible
-         on a white background. */
+      /* Inline text entry: plain, transparent, no frame.
+         The point is to look like ordinary on-canvas text while typing, so the
+         only visual affordance is a thin caret and a faint outline. A boxed
+         style was tried and rejected: it hid the surrounding content and read
+         as a dialog rather than an annotation. */
       .st-input {
-        position: fixed; min-width: 40px;
-        background: rgba(0, 0, 0, 0.72);
-        border: 2px solid #ffffff;
-        border-radius: 3px;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.35);
-        padding: 2px 5px; outline: none; resize: none;
+        position: fixed; min-width: 24px;
+        background: transparent;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        padding: 0; margin: 0;
+        resize: none;
         font-weight: bold; font-family: "Microsoft YaHei", -apple-system, sans-serif;
-        line-height: 1.3;
+        /* line-height 1 exactly matches the canvas line box, so the glyphs sit
+           where they will sit after commit. */
+        line-height: 1;
+        text-align: center;
         overflow: hidden;
-        /* pre-wrap, not pre: the pre value preserves the soft-wrap breaks a
-           textarea inserts, which is what produced spaces between characters. */
         white-space: pre-wrap;
         word-break: break-word;
         pointer-events: auto;
+        caret-color: currentColor;
       }
-      .st-input::placeholder { color: rgba(255,255,255,0.45); font-weight: normal; }
+      /* A 1px halo keeps the caret and glyphs visible on a same-coloured
+         background without drawing a frame. */
+      .st-input::selection { background: rgba(41,151,255,0.45); }
 
       /* Long-capture progress */
       .st-toast {
@@ -581,8 +586,10 @@
         }
         break;
       case 'text':
-        ctx.font = `bold ${item.size || 24}px "Microsoft YaHei", sans-serif`;
-        ctx.textBaseline = 'top';
+        ctx.font = `bold ${item.size || DEFAULT_FONT_SIZE}px "Microsoft YaHei", sans-serif`;
+        // middle baseline, matching the editor's own vertical centring, so text
+        // does not jump when the editor is committed.
+        ctx.textBaseline = 'middle';
         ctx.fillText(item.text, item.start.x, item.start.y);
         break;
     }
@@ -671,20 +678,34 @@
     input.className = 'st-input';
     input.rows = 1;
     input.spellcheck = false;
-    input.style.left = `${point.x}px`;
-    input.style.top = `${point.y}px`;
     input.style.fontSize = `${state.fontSize}px`;
     applyInputColor(input, state.color);
+
+    /**
+     * Centre the editor on the click point.
+     *
+     * Canvas draws text with textBaseline 'middle', so the click point is the
+     * vertical centre of the glyphs. The editor has to agree, or the text jumps
+     * when it is committed. Horizontally the text is centred too, so the box
+     * grows outwards from the click instead of only to the right.
+     */
+    const positionInput = element => {
+      const width = element.offsetWidth || 24;
+      const height = element.offsetHeight || state.fontSize * 1.3;
+      element.style.left = `${point.x - width / 2}px`;
+      element.style.top = `${point.y - height / 2}px`;
+    };
 
     const grow = () => {
       // Measure with the same font the canvas will use, so the box matches the
       // rendered result. Width is capped to the viewport so long text wraps.
       const maxWidth = Math.max(80, (state.frame?.viewport.width || 800) - point.x - 16);
       input.style.width = '0px';
-      const measured = measureTextWidth(input.value || ' ', state.fontSize) + 16;
-      input.style.width = `${Math.min(maxWidth, Math.max(40, measured))}px`;
+      const measured = measureTextWidth(input.value || ' ', state.fontSize) + 2;
+      input.style.width = `${Math.min(maxWidth, Math.max(24, measured))}px`;
       input.style.height = 'auto';
       input.style.height = `${input.scrollHeight}px`;
+      positionInput(input);
     };
 
     input.addEventListener('input', grow);
@@ -703,6 +724,10 @@
 
     root.append(input);
     textInput = input;
+    // Remember the click point: commitTextInput records the text position from
+    // it, not from the box's top-left corner, because the box is centred.
+    input.dataset.originX = String(point.x);
+    input.dataset.originY = String(point.y);
     grow();
     input.focus();
   }
@@ -723,8 +748,10 @@
   function commitTextInput() {
     if (!textInput) return;
     const value = textInput.value.trim();
-    const left = parseFloat(textInput.style.left) || 0;
-    const top = parseFloat(textInput.style.top) || 0;
+    // Use the original click point, not the box corner: the editor is centred
+    // on the point and canvas text is drawn from its centre.
+    const left = Number(textInput.dataset.originX) || 0;
+    const top = Number(textInput.dataset.originY) || 0;
     // Read the colour from the element, not from state.color: the user may have
     // changed it while typing, and the element is the source of truth for what
     // was on screen.
@@ -884,6 +911,22 @@
     }
     refreshToolbar();
     draw();
+
+    // Picking the text tool must be enough to start typing. Opening the editor
+    // here, at the middle of the selection (or the viewport when there is none),
+    // removes the extra click the user had to discover on their own. The editor
+    // can still be moved by clicking elsewhere while the tool is active.
+    if (state.mode === 'text') openTextEditorAtDefaultPoint();
+  }
+
+  /** Open the text editor at a sensible starting point for the text tool. */
+  function openTextEditorAtDefaultPoint() {
+    const sel = state.selection;
+    const viewport = state.frame?.viewport || { width: window.innerWidth, height: window.innerHeight };
+    const point = sel
+      ? { x: sel.x + sel.w / 2, y: sel.y + sel.h / 2 }
+      : { x: viewport.width / 2, y: viewport.height / 2 };
+    startTextInput(point);
   }
 
   function undo() {

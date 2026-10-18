@@ -178,16 +178,50 @@ test('the text tool opens an editor without requiring a selection', () => {
   );
 });
 
+test('picking the text tool opens the editor immediately', () => {
+  // The user should not have to click the canvas afterwards.
+  assert.match(overlay, /openTextEditorAtDefaultPoint/, 'setMode must open the editor');
+  const setMode = overlay.slice(overlay.indexOf('function setMode'));
+  const body = setMode.slice(0, setMode.indexOf('\n  }'));
+  assert.match(body, /state\.mode === 'text'\)\s*openTextEditorAtDefaultPoint\(\)/,
+    'setMode must call it when the text tool is chosen');
+});
+
+test('the editor is centred on the click point, not cornered there', () => {
+  // The commit reads the origin from dataset, because the box is centred on it.
+  assert.match(overlay, /dataset\.originX/, 'the click point must be remembered');
+  assert.match(overlay, /point\.x - width \/ 2/, 'the box must be centred horizontally');
+  assert.match(overlay, /point\.y - height \/ 2/, 'the box must be centred vertically');
+});
+
 test('the editor is focused as soon as it opens', () => {
   assert.match(overlay, /input\.focus\(\)/);
 });
 
-test('the editor uses a white frame on a dark fill', async () => {
-  // WeChat-style: readable over both white and black page content.
+test('the editor is transparent with no frame', async () => {
+  // A boxed style was tried and rejected: it hid the surrounding content and
+  // read as a dialog rather than an annotation.
   const css = overlay.slice(overlay.indexOf('.st-input {'));
   const block = css.slice(0, css.indexOf('}'));
-  assert.match(block, /border:\s*2px solid #ffffff/i, 'frame must be white');
-  assert.match(block, /background:\s*rgba\(0,\s*0,\s*0,\s*0?\.7/, 'fill must be dark translucent');
+  assert.match(block, /background:\s*transparent/, 'must have no fill');
+  assert.match(block, /border:\s*none/, 'must have no frame');
+  assert.match(block, /box-shadow:\s*none/, 'must have no shadow');
+});
+
+test('the editor centres its text both ways', async () => {
+  const css = overlay.slice(overlay.indexOf('.st-input {'));
+  const block = css.slice(0, css.indexOf('}'));
+  assert.match(block, /text-align:\s*center/, 'horizontal centring is required');
+  // line-height 1 makes the textarea line box match the canvas glyph box, so
+  // vertical centring does not shift on commit.
+  assert.match(block, /line-height:\s*1\s*;/, 'line-height must be 1');
+});
+
+test('canvas text is vertically centred like the editor', () => {
+  const block = overlay.slice(overlay.indexOf("case 'text':"));
+  const line = block.slice(0, block.indexOf('break;'));
+  assert.match(line, /textBaseline\s*=\s*'middle'/, 'canvas must use a middle baseline');
+  assert.ok(!/'top'/.test(line), 'a top baseline was the cause of the text sitting low');
 });
 
 test('the editor text colour follows the selected swatch', () => {
