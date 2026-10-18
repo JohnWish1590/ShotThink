@@ -56,7 +56,9 @@ Capture happens **before** the overlay is drawn. The overlay then uses the captu
 | `src/sender.js` | upload + insert instructions + submit | to port, unchanged |
 | `src/daily.js` | one chat per day, rename to date | to port, unchanged |
 | `src/i18n.js` | zh/en strings | to port, rebrand |
-| `src/capture.js` | `captureVisibleTab` wrapper, DPR math | todo |
+| `src/capture.js` | `captureVisibleTab` wrapper, DPR math | done |
+| `src/store.js` | IndexedDB image store, migration, orphan pruning | done |
+| `tests/store.test.mjs` | storage layer tests | done, 10/10 |
 | `src/overlay.js` | region select + annotation canvas | todo |
 | `src/overlay.css` | overlay and toolbar styling | todo |
 | `src/toolbar.js` | toolbar DOM, inline SVG icons | todo |
@@ -119,11 +121,32 @@ Hard limits: `captureVisibleTab` is throttled to roughly 2 calls per second, so 
 
 ## 5. Known risks
 
-### P0 — storage quota
+### P0 — storage quota (resolved)
 
-Mouse4's queue caps images at 8,000,000 base64 characters (~6 MB binary) while `chrome.storage.local` defaults to 10 MB. In the desktop build the bitmap lives on disk and the queue only relays it, so the cap is harmless. In a pure extension the `dataUrl` **is** the storage, so two or three full-HD PNGs hit the ceiling.
+Mouse4's queue caps images at 8,000,000 base64 characters (~6 MB binary) while `chrome.storage.local` defaults to 10 MB. In the desktop build the bitmap lives on disk and the queue only relays it, so the cap is harmless. In a pure extension the `dataUrl` **is** the storage.
 
-Mitigation: store the bitmap in **IndexedDB** (no base64 inflation, no 10 MB cap) and keep only metadata in `chrome.storage.local`. Also note Mouse4's `MAX_IMAGE_BYTES = 5 MB` already blocks tall stitched images today — long captures should default to JPEG quality 0.85.
+Measured against real screenshots on this machine (`Pictures/Mouse4 Captures`, cropped to a 1920×1080 viewport):
+
+| Sample | PNG | as base64 |
+|---|---|---|
+| 1 | 1.04 MB | 1.38 MB |
+| 2 | 1.80 MB | 2.40 MB |
+| 3 | 1.26 MB | 1.68 MB |
+| 4 | 0.46 MB | 0.61 MB |
+| 5 | 1.12 MB | 1.49 MB |
+| 6 | 0.60 MB | 0.80 MB |
+| **mean** | **1.05 MB** | **1.39 MB** |
+
+So 10 MB held roughly seven ordinary screenshots, and one real long capture from the same folder is already 9.0 MB (3784×18051) or 9.3 MB (2170×34742) — **a single long capture could not be stored at all**.
+
+Resolution: images moved to **IndexedDB** (`src/store.js`). No base64 inflation, no 10 MB ceiling. `chrome.storage.local` now holds only routing metadata. `sender.js` is untouched — the worker rehydrates `job.dataUrl` in memory immediately before a send, so the content script still sees the shape it expects.
+
+Supporting pieces:
+
+- `reconcileImageStore()` runs on worker start: migrates any legacy inline `dataUrl`, then prunes orphaned blobs.
+- `deleteImage` is called on confirmed send, on `clearJob`, and on `clear`.
+- A failed metadata write deletes the blob it just wrote, so no leak on that path.
+- Tests: `node tests/store.test.mjs` (10 cases, including chunked base64 round-trip and the size arithmetic above).
 
 ### P0 — MV3 service worker lifetime
 
@@ -169,6 +192,6 @@ Consequences:
 | M2 | full annotation set + toolbar UI | ~700 lines |
 | M3 | wire into ported `background.js`, capture → dated chat | ~150 lines |
 | M4 | long capture: scroll stitch, sticky handling, virtualised detection | ~250 lines |
-| M5 | IndexedDB storage, worker keepalive, JPEG output | ~200 lines |
+| M5 | IndexedDB storage, worker keepalive, JPEG output | storage **done**; keepalive and JPEG output remain |
 
 Total roughly 1400 new lines, because ~856 lines of delivery logic carry over.

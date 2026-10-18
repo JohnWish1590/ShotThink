@@ -47,11 +47,19 @@ The background tab that performs delivery must stay open. ShotThink never reads 
 |---|---|
 | `activeTab` | Capture and annotate only the tab you explicitly invoke it on |
 | `scripting` | Inject the overlay into that tab |
-| `storage` | Queue, daily-chat mapping, and settings |
+| `storage` | Queue metadata, daily-chat mapping, and settings |
 | `contextMenus` | The "Send to AI" item for selected text |
 | `host_permissions: chatgpt.com` | Upload the image and press send on your behalf |
 
 `activeTab` is granted by your click or the keyboard command, so ShotThink never holds standing access to every site you visit.
+
+Captured images are stored in IndexedDB rather than `chrome.storage.local`. Chrome caps the latter at 10 MB and only holds text, so an image would have to be base64-encoded (+33%) first — roughly seven ordinary screenshots, and not even one long capture. IndexedDB keeps the original bytes and has no comparable ceiling.
+
+## Tests
+
+```bash
+node tests/store.test.mjs
+```
 
 ## License
 

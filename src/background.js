@@ -1,4 +1,4 @@
-importScripts('i18n.js', 'daily.js', 'capture.js');
+importScripts('i18n.js', 'daily.js', 'capture.js', 'store.js');
 
 /* ShotThink background service worker.
  *
@@ -24,6 +24,11 @@ const mutate = fn => {
 };
 
 const isManualJob = job => ['failed', 'uncertain'].includes(job?.status);
+
+/* Images live in IndexedDB, not in chrome.storage.local. See src/store.js for
+   the measurements behind that decision. The queue keeps only metadata. */
+const IMAGE_QUEUE_LIMIT = 30;
+const IMAGE_BYTES_LIMIT = 400 * 1024 * 1024;
 
 async function setQueuePaused(error) {
   await chrome.storage.local.set({
@@ -134,14 +139,16 @@ if (chrome.contextMenus?.onClicked?.addListener) {
       console.error('ShotThink selected-text send failed', error)
     );
   });
-  if (chrome.runtime.onInstalled?.addListener) {
-    chrome.runtime.onInstalled.addListener(() => void installTextContextMenu());
-  }
-  if (chrome.runtime.onStartup?.addListener) {
-    chrome.runtime.onStartup.addListener(() => void installTextContextMenu());
-  }
-  void installTextContextMenu();
 }
+
+/* Startup work: the menu has to exist, and the image store may need repair. */
+function onWorkerStart() {
+  void installTextContextMenu();
+  void reconcileImageStore();
+}
+if (chrome.runtime.onInstalled?.addListener) chrome.runtime.onInstalled.addListener(onWorkerStart);
+if (chrome.runtime.onStartup?.addListener) chrome.runtime.onStartup.addListener(onWorkerStart);
+onWorkerStart();
 
 /* ------------------------------------------------------- message handling */
 
@@ -178,25 +185,46 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(dataUrl || '')) {
         throw Error('截图数据无效，未发送。');
       }
-      if (dataUrl.length > 14000000) throw Error('截图超过 10 MB，未发送。');
-      const rules = await textRules();
-      await mutate(jobs => {
-        const activeJobs = jobs.filter(job => !job.archived);
-        if (activeJobs.length >= 30) throw Error('发送队列已满，请先清理完成记录。');
-        if (activeJobs.reduce((n, j) => n + (j.dataUrl?.length || 0), 0) + dataUrl.length > 8000000) {
-          throw Error('浏览器发送队列已满，请先核对并清理旧记录。');
-        }
-        jobs.push({
-          id: crypto.randomUUID(),
-          name: name || 'shotthink.png',
-          dataUrl,
-          rules,
-          status: 'queued',
-          created: Date.now()
+
+      const blob = await dataUrlToBlob(dataUrl);
+      if (blob.size > 50 * 1024 * 1024) throw Error('截图超过 50 MB，未发送。');
+
+      const { jobs = [] } = await chrome.storage.local.get('jobs');
+      const activeJobs = jobs.filter(job => !job.archived);
+      if (activeJobs.length >= IMAGE_QUEUE_LIMIT) {
+        throw Error('发送队列已满，请先清理完成记录。');
+      }
+
+      // IndexedDB holds the bytes; the job record holds only routing metadata.
+      // The byte budget is generous because it is no longer competing with a
+      // 10 MB text quota, but it still stops an unbounded backlog.
+      const id = crypto.randomUUID();
+      const usage = await imageBytes();
+      if (usage.bytes + blob.size > IMAGE_BYTES_LIMIT) {
+        throw Error('图片存储空间不足，请清理旧记录。');
+      }
+
+      await putImage(id, blob);
+      try {
+        await mutate(stored => {
+          stored.push({
+            id,
+            name: name || 'shotthink.png',
+            rules: message.rules || '',
+            status: 'queued',
+            created: Date.now(),
+            hasImage: true,
+            bytes: blob.size
+          });
         });
-      });
+      } catch (error) {
+        // Never leave a Blob behind when the metadata write fails.
+        await deleteImage(id).catch(() => {});
+        throw error;
+      }
+
       void processQueue();
-      return { ok: true };
+      return { ok: true, id };
     }
 
     if (message.type === 'progress' && sender.tab && new URL(sender.url).origin === 'https://chatgpt.com') {
@@ -356,6 +384,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     }
 
     if (message.type === 'clearJob' && sender.url === chrome.runtime.getURL('ui/options.html')) {
+      let removedId = null;
       await mutate(jobs => {
         const job = jobs.find(item => item.id === message.id && isManualJob(item) && !item.archived);
         if (!job) throw Error('找不到可移出的人工处理记录。');
@@ -364,16 +393,27 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         }
         job.archived = true;
         job.archivedAt = Date.now();
+        removedId = job.id;
       });
+      if (removedId) await deleteImage(removedId).catch(() => {});
       return { ok: true };
     }
 
     if (message.type === 'clear' && sender.url === chrome.runtime.getURL('ui/options.html')) {
+      const doomed = [];
       await mutate(jobs => {
         const kept = jobs.filter(j => j.status !== 'sent' || j.archived);
+        for (const job of jobs) {
+          if (!kept.includes(job) && job.hasImage) doomed.push(job.id);
+        }
         jobs.splice(0, jobs.length, ...kept);
       });
+      await deleteImages(doomed).catch(() => {});
       return { ok: true };
+    }
+
+    if (message.type === 'storageUsage' && sender.url === chrome.runtime.getURL('ui/options.html')) {
+      return { ok: true, ...(await imageBytes()) };
     }
 
     if (message.type === 'verify' && sender.url === chrome.runtime.getURL('ui/options.html')) {
@@ -388,6 +428,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
             await mutate(stored => Object.assign(stored.find(j => j.id === job.id), {
               status: 'sent', url: receipt.url, dataUrl: '', text: '', error: '', diagnostic: '', completed: Date.now()
             }));
+            await deleteImage(job.id).catch(() => {});
             continue;
           }
           await mutate(stored => {
@@ -411,6 +452,34 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
 });
 
 /* --------------------------------------------------------------- queue run */
+
+/**
+ * Bring the image store in line with the job list on startup.
+ *
+ * Two things can drift: legacy jobs still carrying an inline `dataUrl`, and
+ * orphaned Blobs whose job was already sent, archived, or cleared while the
+ * worker was asleep.
+ */
+async function reconcileImageStore() {
+  try {
+    const { jobs = [] } = await chrome.storage.local.get('jobs');
+
+    const migrated = await migrateInlineImages(jobs);
+    if (migrated) {
+      await chrome.storage.local.set({ jobs });
+      console.info(`ShotThink moved ${migrated} inline image(s) into IndexedDB`);
+    }
+
+    // Keep bytes for anything that might still need to be sent or reviewed.
+    const liveIds = jobs
+      .filter(job => !job.archived && job.hasImage && ['queued', 'preparing', 'uploading', 'sending', 'failed', 'uncertain'].includes(job.status))
+      .map(job => job.id);
+    const pruned = await pruneOrphanImages(liveIds);
+    if (pruned) console.info(`ShotThink dropped ${pruned} orphaned image(s)`);
+  } catch (error) {
+    console.error('ShotThink could not reconcile the image store', error);
+  }
+}
 
 async function repairKnownUnsent() {
   const repaired = await mutate(jobs => {
@@ -464,6 +533,17 @@ async function processQueue() {
         const { jobs: previousJobs = [] } = await chrome.storage.local.get('jobs');
         job.failedPrompts = previousJobs.filter(j => j.status === 'failed' && j.id !== job.id).map(promptFor);
 
+        // Rehydrate the bitmap from IndexedDB just before handing the job over.
+        // sender.js still receives `job.dataUrl`, so the content script is
+        // untouched; the image only exists in memory for the length of a send.
+        if (job.inputType !== 'text') {
+          const dataUrl = await imageDataUrl(job.id);
+          if (!dataUrl) {
+            throw Error('本地截图已丢失，未发送。');
+          }
+          job.dataUrl = dataUrl;
+        }
+
         let response;
         try {
           const sendType = job.inputType === 'text' ? 'sendText' : 'sendScreenshot';
@@ -499,6 +579,8 @@ async function processQueue() {
             dataUrl: '', text: '', completed: Date.now()
           });
         });
+        // The bytes are no longer needed once delivery is confirmed.
+        await deleteImage(job.id).catch(() => {});
         job.url = response.url;
         await nameDaily(job);
         namedDays.add(job.day);

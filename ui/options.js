@@ -110,6 +110,23 @@ async function render() {
     : `${shotThinkText('人工处理')} (${manual.length})`;
 
   $('resume').hidden = !queuePaused;
+
+  // Images live in IndexedDB, which has no practical 10 MB ceiling. Show the
+  // real footprint so a growing backlog is visible before it becomes a problem.
+  try {
+    const usage = await chrome.runtime.sendMessage({ type: 'storageUsage' });
+    if (usage?.ok) {
+      $('usage').textContent = usage.count
+        ? `${shotThinkText('本地图片')}: ${usage.count} · ${formatBytes(usage.bytes)}`
+        : '';
+    }
+  } catch {}
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 /* --------------------------------------------------------------- actions */
