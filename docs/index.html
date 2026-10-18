@@ -88,6 +88,12 @@
     border-color: var(--line-strong);
   }
   .btn.ghost:hover { background: var(--surface-2); }
+  .lang-toggle {
+    color: var(--muted); font-size: 14px; padding: 6px 10px;
+    border-radius: 8px; border: 1px solid var(--line);
+    min-width: 44px; text-align: center;
+  }
+  .lang-toggle:hover { color: var(--text); border-color: var(--line-strong); text-decoration: none; }
 
   /* hero */
   .hero { padding: 72px 0 40px; }
@@ -224,11 +230,12 @@
       <span>ShotThink</span>
     </a>
     <nav class="links">
-      <a href="#features">Features</a>
-      <a href="#install">Install</a>
-      <a href="#safety">Safety</a>
-      <a href="#faq">FAQ</a>
-      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">Download</a>
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#install" data-i18n="nav.install">Install</a>
+      <a href="#safety" data-i18n="nav.safety">Safety</a>
+      <a href="#faq" data-i18n="nav.faq">FAQ</a>
+      <a href="#" id="lang-toggle" class="lang-toggle" aria-label="切换到中文">中文</a>
+      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip" data-i18n="nav.download">Download</a>
     </nav>
   </div>
 </header>
@@ -236,39 +243,39 @@
 <main id="top">
 
   <div class="wrap hero">
-    <h1>Capture. Annotate. <em>Ask.</em></h1>
-    <p class="lead">
+    <h1 data-i18n="hero.h1">Capture. Annotate. <em>Ask.</em></h1>
+    <p class="lead" data-i18n="hero.lead">
       A Chrome extension that sends a browser screenshot straight into your own
       ChatGPT conversation. Capture a region, mark it up, and it lands in a dated
       chat with your standing instructions attached.
     </p>
     <div class="hero-actions">
-      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">Download for Chrome</a>
-      <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink">View source</a>
+      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip" data-i18n="hero.cta">Download for Chrome</a>
+      <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink" data-i18n="hero.source">View source</a>
     </div>
-    <p class="hero-note">
+    <p class="hero-note" data-i18n="hero.note">
       <strong>Free.</strong> No API key, no subscription, no per-request billing. MIT licensed.
     </p>
 
     <div class="shot">
-      <img src="demo-en.gif" alt="Selecting a region, annotating it with a rectangle and arrow, and sending it to ChatGPT" width="1080">
+      <img id="demo-gif" src="demo-en.gif" alt="Selecting a region, annotating it with a rectangle and arrow, and sending it to ChatGPT" width="1080">
     </div>
   </div>
 
   <section id="free">
     <div class="wrap">
       <div class="free">
-        <h2>Why it costs nothing</h2>
-        <p>
+        <h2 data-i18n="free.h2">Why it costs nothing</h2>
+        <p data-i18n="free.p1">
           ShotThink does not call the OpenAI API. It drives the ChatGPT page you are
           already signed in to: it picks the file input, writes your instructions into
           the editor, and clicks send.
         </p>
-        <p>
+        <p data-i18n="free.p2">
           So it spends <strong>whatever your existing subscription already covers</strong>,
           instead of billing you per token. There is no key to obtain and nothing to top up.
         </p>
-        <p>
+        <p data-i18n="free.p3">
           The trade-off is that delivery depends on ChatGPT's page structure and on a
           background tab staying open. Every guard in the tool exists because of that.
         </p>
@@ -278,38 +285,38 @@
 
   <section id="features">
     <div class="wrap">
-      <h2>What it does</h2>
-      <p class="sub">Everything a screenshot tool needs, nothing it does not.</p>
+      <h2 data-i18n="features.h2">What it does</h2>
+      <p class="sub" data-i18n="features.sub">Everything a screenshot tool needs, nothing it does not.</p>
       <div class="grid three">
         <div class="card">
           <span class="icon">⌗</span>
-          <h3>Region capture</h3>
-          <p>Pixel-accurate at any display scaling, including 125% and 150% Windows scaling.</p>
+          <h3 data-i18n="f1.h">Region capture</h3>
+          <p data-i18n="f1.p">Pixel-accurate at any display scaling, including 125% and 150% Windows scaling.</p>
         </div>
         <div class="card">
           <span class="icon">✎</span>
-          <h3>Six annotation tools</h3>
-          <p>Rectangle, ellipse, arrow, pen, text and mosaic, with undo. Colours and font size are remembered.</p>
+          <h3 data-i18n="f2.h">Six annotation tools</h3>
+          <p data-i18n="f2.p">Rectangle, ellipse, arrow, pen, text and mosaic, with undo. Colours and font size are remembered.</p>
         </div>
         <div class="card">
           <span class="icon">T</span>
-          <h3>Text that previews itself</h3>
-          <p>Opens where your mouse is, wraps at the selection edge, and draws exactly as it looked while typing.</p>
+          <h3 data-i18n="f3.h">Text that previews itself</h3>
+          <p data-i18n="f3.p">Opens where your mouse is, wraps at the selection edge, and draws exactly as it looked while typing.</p>
         </div>
         <div class="card">
           <span class="icon">⤓</span>
-          <h3>Long capture</h3>
-          <p>Scrolls the page and stitches by exact scroll position. Sticky headers are suppressed so they do not repeat.</p>
+          <h3 data-i18n="f4.h">Long capture</h3>
+          <p data-i18n="f4.p">Scrolls the page and stitches by exact scroll position. Sticky headers are suppressed so they do not repeat.</p>
         </div>
         <div class="card">
           <span class="icon">◷</span>
-          <h3>One chat per day</h3>
-          <p>Each day gets a conversation named <code>YYYY-MM-DD</code>. Later captures append to it, numbered.</p>
+          <h3 data-i18n="f5.h">One chat per day</h3>
+          <p data-i18n="f5.p">Each day gets a conversation named <code>YYYY-MM-DD</code>. Later captures append to it, numbered.</p>
         </div>
         <div class="card">
           <span class="icon">◧</span>
-          <h3>Selected text</h3>
-          <p>Right-click any selected text → Send to AI. No clipboard reading, no global keyboard hooks.</p>
+          <h3 data-i18n="f6.h">Selected text</h3>
+          <p data-i18n="f6.p">Right-click any selected text → Send to AI. No clipboard reading, no global keyboard hooks.</p>
         </div>
       </div>
     </div>
@@ -317,34 +324,34 @@
 
   <section id="install">
     <div class="wrap">
-      <h2>Install</h2>
-      <p class="sub">
+      <h2 data-i18n="install.h2">Install</h2>
+      <p class="sub" data-i18n="install.sub">
         ShotThink is not on the Chrome Web Store — it automates a third-party site,
         which is a poor fit for store review. Installing it takes about a minute.
       </p>
       <ol class="steps">
         <li>
-          <strong>Download and unzip</strong>
-          <a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">ShotThink-1.0.0.zip</a>
-          into a folder you will keep.
+          <strong data-i18n="i1.h">Download and unzip</strong>
+          <span data-i18n="i1.p"><a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">ShotThink-1.0.0.zip</a>
+          into a folder you will keep.</span>
         </li>
         <li>
-          <strong>Open <code>chrome://extensions/</code></strong>
-          and turn on <strong>Developer mode</strong> in the top right.
+          <strong data-i18n="i2.h">Open <code>chrome://extensions/</code></strong>
+          <span data-i18n="i2.p">and turn on <strong>Developer mode</strong> in the top right.</span>
         </li>
         <li>
-          <strong>Click “Load unpacked”</strong>
-          and select the folder you unzipped.
+          <strong data-i18n="i3.h">Click “Load unpacked”</strong>
+          <span data-i18n="i3.p">and select the folder you unzipped.</span>
         </li>
         <li>
-          <strong>Sign in to chatgpt.com</strong>
-          in the same browser profile. ShotThink uses that session; it never reads
-          your credentials.
+          <strong data-i18n="i4.h">Sign in to chatgpt.com</strong>
+          <span data-i18n="i4.p">in the same browser profile. ShotThink uses that session; it never reads
+          your credentials.</span>
         </li>
         <li>
-          <strong>Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></strong>
-          or click the toolbar icon. <code>Ctrl+Shift+S</code> is reserved by Chrome
-          for “Save page as”, so it cannot be used.
+          <strong data-i18n="i5.h">Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></strong>
+          <span data-i18n="i5.p">or click the toolbar icon. <code>Ctrl+Shift+S</code> is reserved by Chrome
+          for “Save page as”, so it cannot be used.</span>
         </li>
       </ol>
     </div>
@@ -352,25 +359,25 @@
 
   <section id="safety">
     <div class="wrap">
-      <h2>Safety</h2>
-      <p class="sub">
+      <h2 data-i18n="safety.h2">Safety</h2>
+      <p class="sub" data-i18n="safety.sub">
         These are not edge cases bolted on afterwards. They are the reason the tool
         is usable at all.
       </p>
-      <div class="warn">
+      <div class="warn" data-i18n="s1">
         <strong>A send whose outcome is unknown is never retried automatically.</strong>
         It is marked uncertain and you check the conversation. A duplicate screenshot
         in your chat is worse than asking you to look.
       </div>
-      <div class="warn">
+      <div class="warn" data-i18n="s2">
         <strong>An existing draft is never overwritten.</strong>
         If the composer already has text in it, the send stops and tells you.
       </div>
-      <div class="warn">
+      <div class="warn" data-i18n="s3">
         <strong>A generating answer is never interrupted.</strong>
         The queue waits for it to finish rather than cutting in.
       </div>
-      <div class="warn">
+      <div class="warn" data-i18n="s4">
         <strong>Restricted pages are detected before injection.</strong>
         <code>chrome://</code>, the Web Store, the PDF viewer and the extension's own
         pages cannot be captured; the tool says so instead of failing silently.
@@ -380,19 +387,19 @@
 
   <section id="permissions">
     <div class="wrap">
-      <h2>Permissions</h2>
-      <p class="sub">
+      <h2 data-i18n="perm.h2">Permissions</h2>
+      <p class="sub" data-i18n="perm.sub">
         No <code>&lt;all_urls&gt;</code>. No <code>debugger</code>. No cookie access.
       </p>
       <table>
-        <thead><tr><th>Permission</th><th>Why</th></tr></thead>
+        <thead><tr><th data-i18n="perm.th1">Permission</th><th data-i18n="perm.th2">Why</th></tr></thead>
         <tbody>
-          <tr><td><code>activeTab</code></td><td>Capture and annotate only the tab you invoke it on. Granted by your click or shortcut — never standing access to every site.</td></tr>
-          <tr><td><code>scripting</code></td><td>Inject the overlay into that tab.</td></tr>
-          <tr><td><code>storage</code></td><td>Queue metadata, the daily-chat mapping, and your settings.</td></tr>
-          <tr><td><code>contextMenus</code></td><td>The “Send to AI” item for selected text.</td></tr>
-          <tr><td><code>alarms</code></td><td>Settle jobs whose page died mid-send.</td></tr>
-          <tr><td><code>chatgpt.com</code></td><td>Upload the image and press send on your behalf.</td></tr>
+          <tr><td><code>activeTab</code></td><td data-i18n="perm.r1">Capture and annotate only the tab you invoke it on. Granted by your click or shortcut — never standing access to every site.</td></tr>
+          <tr><td><code>scripting</code></td><td data-i18n="perm.r2">Inject the overlay into that tab.</td></tr>
+          <tr><td><code>storage</code></td><td data-i18n="perm.r3">Queue metadata, the daily-chat mapping, and your settings.</td></tr>
+          <tr><td><code>contextMenus</code></td><td data-i18n="perm.r4">The “Send to AI” item for selected text.</td></tr>
+          <tr><td><code>alarms</code></td><td data-i18n="perm.r5">Settle jobs whose page died mid-send.</td></tr>
+          <tr><td><code>chatgpt.com</code></td><td data-i18n="perm.r6">Upload the image and press send on your behalf.</td></tr>
         </tbody>
       </table>
     </div>
@@ -400,31 +407,31 @@
 
   <section id="faq">
     <div class="wrap">
-      <h2>Questions</h2>
+      <h2 data-i18n="faq.h2">Questions</h2>
       <div class="grid two" style="margin-top:28px">
         <div class="card">
-          <h3>Does it work with a free ChatGPT account?</h3>
-          <p>Yes. It uses whatever the browser is signed in to. If the web page works, ShotThink works.</p>
+          <h3 data-i18n="q1.h">Does it work with a free ChatGPT account?</h3>
+          <p data-i18n="q1.p">Yes. It uses whatever the browser is signed in to. If the web page works, ShotThink works.</p>
         </div>
         <div class="card">
-          <h3>Will my screenshots be sent to your server?</h3>
-          <p>No. There is no server. The image goes from your browser to chatgpt.com and nowhere else.</p>
+          <h3 data-i18n="q2.h">Will my screenshots be sent to your server?</h3>
+          <p data-i18n="q2.p">No. There is no server. The image goes from your browser to chatgpt.com and nowhere else.</p>
         </div>
         <div class="card">
-          <h3>Why can't it capture WeChat or Excel?</h3>
-          <p>A browser extension can only see browser content. For the whole desktop, the same author makes <a href="https://github.com/JohnWish1590/Mouse4">Mouse4</a>, a Windows tool.</p>
+          <h3 data-i18n="q3.h">Why can't it capture WeChat or Excel?</h3>
+          <p data-i18n="q3.p">A browser extension can only see browser content. For the whole desktop, the same author makes <a href="https://github.com/JohnWish1590/Mouse4">Mouse4</a>, a Windows tool.</p>
         </div>
         <div class="card">
-          <h3>What happens if ChatGPT changes its page?</h3>
-          <p>Sending pauses and tells you, rather than guessing. The selectors are redundant and the failure is visible, so an update can fix it quickly.</p>
+          <h3 data-i18n="q4.h">What happens if ChatGPT changes its page?</h3>
+          <p data-i18n="q4.p">Sending pauses and tells you, rather than guessing. The selectors are redundant and the failure is visible, so an update can fix it quickly.</p>
         </div>
         <div class="card">
-          <h3>Do I need to keep a ChatGPT tab open?</h3>
-          <p>Yes. It runs in the background and does not need to be in front, but closing it stops delivery.</p>
+          <h3 data-i18n="q5.h">Do I need to keep a ChatGPT tab open?</h3>
+          <p data-i18n="q5.p">Yes. It runs in the background and does not need to be in front, but closing it stops delivery.</p>
         </div>
         <div class="card">
-          <h3>Is Firefox supported?</h3>
-          <p>No. The extension relies on Chromium's <code>captureVisibleTab</code> and <code>scripting</code> behaviour.</p>
+          <h3 data-i18n="q6.h">Is Firefox supported?</h3>
+          <p data-i18n="q6.p">No. The extension relies on Chromium's <code>captureVisibleTab</code> and <code>scripting</code> behaviour.</p>
         </div>
       </div>
     </div>
@@ -432,12 +439,12 @@
 
   <section id="download">
     <div class="wrap">
-      <h2>Get it</h2>
-      <p class="sub">Free, MIT licensed, and about 80 KB.</p>
+      <h2 data-i18n="get.h2">Get it</h2>
+      <p class="sub" data-i18n="get.sub">Free, MIT licensed, and about 80 KB.</p>
       <div class="hero-actions">
-        <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip">Download v1.0.0</a>
-        <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink">Source on GitHub</a>
-        <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink/blob/main/CHANGELOG.md">Changelog</a>
+        <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.0.0/ShotThink-1.0.0.zip" data-i18n="get.download">Download v1.0.0</a>
+        <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink" data-i18n="get.source">Source on GitHub</a>
+        <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink/blob/main/CHANGELOG.md" data-i18n="get.changelog">Changelog</a>
       </div>
     </div>
   </section>
@@ -446,14 +453,15 @@
 
 <footer class="site">
   <div class="wrap">
-    <span>ShotThink · Capture, annotate, ask.</span>
+    <span data-i18n="footer.tag">ShotThink · Capture, annotate, ask.</span>
     <div class="right">
       <a href="https://github.com/JohnWish1590/ShotThink">GitHub</a>
-      <a href="https://github.com/JohnWish1590/ShotThink/blob/main/LICENSE">MIT License</a>
+      <a href="https://github.com/JohnWish1590/ShotThink/blob/main/LICENSE" data-i18n="footer.license">MIT License</a>
       <a href="https://github.com/JohnWish1590/Mouse4">Mouse4</a>
     </div>
   </div>
 </footer>
 
+<script src="i18n.js"></script>
 </body>
 </html>

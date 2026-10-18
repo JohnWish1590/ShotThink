@@ -1,5 +1,7 @@
 # ShotThink
 
+**English** · **[简体中文](docs/README.zh.md)**
+
 **Capture. Annotate. Ask.**
 
 A free Chrome extension that sends a browser screenshot to your own ChatGPT
@@ -171,7 +173,7 @@ messaging bridge.
 
 Design notes, risks, and milestones: [docs/DESIGN.md](docs/DESIGN.md).
 What was deliberately dropped versus the desktop tool: [docs/SCOPE.md](docs/SCOPE.md).
-中文说明: [docs/README.zh.md](docs/README.zh.md).
+**[简体中文说明](docs/README.zh.md)**
 
 ## Development
 

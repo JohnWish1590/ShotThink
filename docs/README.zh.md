@@ -1,5 +1,7 @@
 # ShotThink 中文说明
 
+**[English](../README.md)** · **简体中文**
+
 **截图，然后思考。**
 
 一个免费的 Chrome 插件：框选网页内容，标注后发送到你自己已登录的 ChatGPT 对话。
