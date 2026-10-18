@@ -103,6 +103,11 @@ globalThis.shotThinkEnglish = {
 
   // Options page
   '分析规则': 'Analysis instructions',
+  '默认规则语言': 'Default rule language',
+  '恢复默认规则': 'Reset to default',
+  '已恢复默认规则。': 'Default rules restored.',
+  '规则已随界面语言更新。': 'Rules updated to match the interface language.',
+  '规则语言已切换；已保留你修改过的规则。': 'Rule language switched; your edited rules were kept.',
   '保存': 'Save',
   '已保存。': 'Saved.',
   '已发送记录已清理。': 'Sent records cleared.',

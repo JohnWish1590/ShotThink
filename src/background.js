@@ -1,4 +1,4 @@
-importScripts('i18n.js', 'daily.js', 'capture.js', 'store.js');
+importScripts('i18n.js', 'rules.js', 'daily.js', 'capture.js', 'store.js');
 
 /* ShotThink background service worker.
  *
@@ -216,6 +216,25 @@ async function textRules() {
   return previous?.rules?.trim() || defaultTextRules();
 }
 
+/**
+ * The rule text to attach to a capture.
+ *
+ * Stored setting wins. Otherwise the built-in default is used in the current
+ * interface language, so an English interface does not send Chinese
+ * instructions to ChatGPT.
+ */
+async function captureRules(override) {
+  if (typeof override === 'string' && override.trim()) return override.trim();
+  const { rules = '' } = await chrome.storage.local.get('rules');
+  if (typeof rules === 'string' && rules.trim()) return rules.trim();
+  return shotThinkDefaultRulesFor(shotThinkLang);
+}
+
+/** The built-in rule text for the current interface language. */
+function defaultCaptureRules() {
+  return shotThinkDefaultRulesFor(shotThinkLang);
+}
+
 async function enqueueSelectedText(info, tab) {
   const text = String(info.selectionText || '').trim();
   if (!text || !tab?.id || !/^https?:\/\//i.test(tab.url || '')) return;
@@ -381,11 +400,9 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       const blob = await dataUrlToBlob(dataUrl);
       if (blob.size > 50 * 1024 * 1024) throw Error('截图超过 50 MB，未发送。');
 
-      // Resolve the analysis instructions the same way the text menu does:
-      // saved setting first, then the most recent job, then the default.
-      const rules = typeof message.rules === 'string' && message.rules.trim()
-        ? message.rules.trim()
-        : await textRules();
+      // Resolve the analysis instructions: explicit override, then the saved
+      // setting, then the built-in default in the interface language.
+      const rules = await captureRules(message.rules);
 
       const { jobs = [] } = await chrome.storage.local.get('jobs');
       const activeJobs = jobs.filter(job => !job.archived);

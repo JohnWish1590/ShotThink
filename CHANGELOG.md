@@ -4,6 +4,39 @@ All notable changes to ShotThink. The version here must match
 `manifest.json`; Chrome only reloads an unpacked extension's code when that
 number changes, so every user-visible fix bumps it.
 
+## [0.7.0] - 2026-10-18
+
+### Fixed
+
+- **Committed text reflowed differently from the editor.** The editor wrapped at
+  the viewport edge, then `canvas.fillText` drew a single unwrapped line, so two
+  lines became one. Wrapping is now decided once and shared: the editor grows
+  with the text and wraps only at the selection's right edge, records that width
+  on the annotation as `maxWidth`, and the canvas wraps at exactly the same
+  point. CJK breaks per character, Latin prefers spaces, and a very narrow
+  selection is widened to 120px so text does not wrap every character.
+
+### Changed
+
+- **Editor frame follows the annotation colour** (`border: 1px solid
+  currentColor`) instead of a fixed blue. The frame now previews the colour that
+  will be committed. The fill dropped to 6% black so it locates the caret
+  without tinting the content, and a white outer ring keeps the frame visible on
+  dark backgrounds.
+
+### Added
+
+- **Default analysis rules in both languages** (`src/rules.js`). Previously the
+  options box was simply empty on first run, and the only built-in rules lived
+  in the context-menu path.
+- **Rule language switch** next to the heading, independent of the interface
+  language. Defaults to the interface language; a Chinese UI can hold English
+  instructions and vice versa.
+- **Reset to default** button.
+- Rule bodies the user has edited are never overwritten: switching the interface
+  language only updates the box while it still holds a built-in default, and the
+  rule-language switch keeps edited text and says so.
+
 ## [0.6.0] - 2026-10-18
 
 ### Fixed

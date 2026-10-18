@@ -240,10 +240,16 @@
          dark outer ring shows on dark content. */
       .st-input {
         position: fixed; min-width: 24px;
-        background: rgba(127, 127, 127, 0.10);
-        border: 1px solid rgba(41, 151, 255, 0.9);
+        /* content-box: the width set below is the text area, so padding and the
+           frame are added on top and the wrap point stays predictable. */
+        box-sizing: content-box;
+        /* The frame follows the annotation colour, so it doubles as a preview of
+           what will be committed. The fill is barely tinted: enough to locate
+           the caret on a white page, not enough to cover the content. */
+        background: rgba(0, 0, 0, 0.06);
+        border: 1px solid currentColor;
         border-radius: 2px;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
         outline: none;
         padding: 1px 3px; margin: 0;
         resize: none;
@@ -595,7 +601,10 @@
         // middle baseline, matching the editor's own vertical centring, so text
         // does not jump when the editor is committed.
         ctx.textBaseline = 'middle';
-        ctx.fillText(item.text, item.start.x, item.start.y);
+        // Wrap using the same width the editor used. Without this the editor
+        // showed two lines and the committed text rendered as one long line.
+        drawWrappedText(ctx, item.text, item.start.x, item.start.y,
+                        item.maxWidth, (item.size || DEFAULT_FONT_SIZE) * 1.3);
         break;
     }
     ctx.restore();
@@ -701,16 +710,42 @@
       element.style.top = `${point.y - height / 2}px`;
     };
 
+    /**
+     * Wrapping width for this annotation.
+     *
+     * Short text must stay on one line: growing the box and wrapping at an
+     * arbitrary point is what made the editor show two lines while the commit
+     * drew one. So the box grows with the text until it reaches the selection's
+     * right edge, and only then wraps. The width is stored on the annotation so
+     * the canvas wraps at exactly the same place.
+     */
+    const wrapWidth = () => {
+      const sel = state.selection;
+      const viewport = state.frame?.viewport || { width: window.innerWidth };
+      // A very narrow selection would allow only a character or two per line,
+      // so it is widened to a usable minimum.
+      const MIN_WRAP = 120;
+      if (sel && sel.w > 0) {
+        const fromAnchor = sel.x + sel.w - point.x;
+        return Math.max(MIN_WRAP, fromAnchor);
+      }
+      return Math.max(MIN_WRAP, viewport.width - point.x - 8);
+    };
+
     const grow = () => {
-      // Measure with the same font the canvas will use, so the box matches the
-      // rendered result. Width is capped to the viewport so long text wraps.
-      const maxWidth = Math.max(80, (state.frame?.viewport.width || 800) - point.x - 16);
+      const maxWidth = wrapWidth();
       input.style.width = '0px';
-      const measured = measureTextWidth(input.value || ' ', state.fontSize) + 2;
-      input.style.width = `${Math.min(maxWidth, Math.max(24, measured))}px`;
+      // Grow with the content; wrap only once the wrap width is reached.
+      const measured = measureTextWidth(input.value || ' ', state.fontSize) + 6;
+      // maxWidth is the total box width the canvas wraps at; subtract padding
+      // and the 1px frame so the rendered box does not exceed it.
+      const inner = Math.max(24, maxWidth - 8);
+      input.style.width = `${Math.max(24, Math.min(inner, measured))}px`;
       input.style.height = 'auto';
       input.style.height = `${input.scrollHeight}px`;
       positionInput(input);
+      // Remember the width so the commit wraps identically.
+      input.dataset.maxWidth = String(maxWidth);
     };
 
     input.addEventListener('input', grow);
@@ -750,6 +785,58 @@
     return probe.measureText(text || '').width;
   }
 
+  /**
+   * Break a string into lines that fit `maxWidth`.
+   *
+   * Chinese and other CJK text has no spaces, so it breaks per character;
+   * Latin text breaks at spaces where possible and falls back to characters for
+   * a single word longer than the line. This is the behaviour the editor
+   * produces natively, which is what the drawn result has to match.
+   */
+  function wrapTextLines(text, maxWidth, size) {
+    if (!maxWidth || maxWidth <= 0) return String(text).split('\n');
+    const probe = document.createElement('canvas').getContext('2d');
+    probe.font = `bold ${size}px "Microsoft YaHei", sans-serif`;
+
+    const lines = [];
+    for (const paragraph of String(text).split('\n')) {
+      if (!paragraph) { lines.push(''); continue; }
+      let current = '';
+      for (const char of paragraph) {
+        const candidate = current + char;
+        if (current && probe.measureText(candidate).width > maxWidth) {
+          // Prefer breaking at the last space for Latin runs.
+          const breakAt = current.lastIndexOf(' ');
+          if (breakAt > 0 && /[A-Za-z0-9]/.test(char)) {
+            lines.push(current.slice(0, breakAt));
+            current = current.slice(breakAt + 1) + char;
+          } else {
+            lines.push(current);
+            current = char;
+          }
+        } else {
+          current = candidate;
+        }
+      }
+      lines.push(current);
+    }
+    return lines;
+  }
+
+  /** Draw text with the same wrapping the editor showed. */
+  function drawWrappedText(context, text, x, y, maxWidth, lineHeight) {
+    const lines = wrapTextLines(text, maxWidth, state.fontSize);
+    if (lines.length <= 1) {
+      context.fillText(text, x, y);
+      return;
+    }
+    // Keep the block centred on the anchor, matching the single-line case.
+    const top = y - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, index) => {
+      context.fillText(line, x, top + index * lineHeight);
+    });
+  }
+
   function commitTextInput() {
     if (!textInput) return;
     const value = textInput.value.trim();
@@ -762,6 +849,9 @@
     // was on screen.
     const color = textInput.dataset.color || state.color;
     const size = parseInt(textInput.style.fontSize, 10) || state.fontSize;
+    // Read the wrapping width before tearing the editor down, otherwise the
+    // dataset is gone by the time the annotation is built.
+    const maxWidth = Number(textInput.dataset.maxWidth) || 0;
     cancelTextInput();
     if (!value) return;
     state.annotations.push({
@@ -769,7 +859,10 @@
       text: value,
       start: { x: left, y: top },
       color,
-      size
+      size,
+      // The editor recorded its wrapping width; the canvas must use the same
+      // one or the committed text reflows into a different shape.
+      maxWidth
     });
     draw();
   }

@@ -12,7 +12,7 @@
   <header>
     <img src="../icons/icon48.png" alt="">
     <h1>ShotThink</h1>
-    <span class="pill" id="version">v0.6.0</span>
+    <span class="pill" id="version">v0.7.0</span>
     <div class="header-tools">
       <div class="seg" id="langSeg" role="group" aria-label="界面语言">
         <button type="button" data-lang="zh" data-no-i18n aria-pressed="true">中文</button>
@@ -48,13 +48,20 @@
   </section>
 
   <section class="panel">
-    <h2>分析规则</h2>
+    <h2 style="display:flex;align-items:center;gap:10px">
+      <span>分析规则</span>
+      <span class="seg" id="rulesLangSeg" role="group" aria-label="规则语言" style="margin-left:auto;text-transform:none;letter-spacing:0">
+        <button type="button" data-rules-lang="zh" data-no-i18n aria-pressed="true">中文</button>
+        <button type="button" data-rules-lang="en" data-no-i18n aria-pressed="false">EN</button>
+      </span>
+    </h2>
     <textarea id="rules" placeholder="每次发送时附带的固定分析指令"></textarea>
     <div class="actions">
       <button class="primary" id="save">保存</button>
+      <button class="quiet" id="resetRules">恢复默认规则</button>
       <span class="status" id="rulesStatus"></span>
     </div>
-    <small>规则会随每张截图一起写入 ChatGPT 对话，作为该条消息的分析要求。</small>
+    <small>规则会随每张截图一起写入 ChatGPT 对话，作为该条消息的分析要求。规则语言可以独立于界面语言；手动修改过规则后，切换界面语言不会覆盖你的内容。</small>
   </section>
 
   <section class="panel">
@@ -81,6 +88,7 @@
   </section>
 </main>
 <script src="../src/i18n.js"></script>
+<script src="../src/rules.js"></script>
 <script src="prefs.js"></script>
 <script src="options.js"></script>
 </body>

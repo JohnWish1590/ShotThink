@@ -213,14 +213,14 @@ test('the editor is focused as soon as it opens', () => {
   assert.match(overlay, /input\.focus\(\)/);
 });
 
-test('the editor has a visible frame so the caret can be found', () => {
+test('the editor frame follows the annotation colour', () => {
   // A fully transparent editor was tried and rejected: on a white page the
-  // caret is invisible, so the user cannot tell where typing will land.
+  // caret is invisible. A fixed blue frame was also rejected because it did not
+  // preview the text colour. currentColor makes the frame the preview.
   const css = overlay.slice(overlay.indexOf('.st-input {'));
   const block = css.slice(0, css.indexOf('}'));
-  assert.match(block, /border:\s*1px solid rgba\(41,\s*151,\s*255/, 'needs a visible border');
+  assert.match(block, /border:\s*1px solid currentColor/, 'frame must follow the text colour');
   assert.match(block, /box-shadow:/, 'needs an outer ring for dark backgrounds');
-  assert.ok(!/background:\s*transparent/.test(block), 'a faint fill is required');
 });
 
 test('the editor frame does not hide the content underneath', () => {
@@ -268,6 +268,39 @@ test('the editor does not preserve soft-wrap whitespace', () => {
   const block = css.slice(0, css.indexOf('}'));
   assert.match(block, /white-space:\s*pre-wrap/, 'must be pre-wrap, not pre');
   assert.ok(!/white-space:\s*pre\s*;/.test(block), 'plain pre must not be used');
+});
+
+test('short text does not wrap, long text wraps at the selection edge', () => {
+  // Regression: the editor wrapped at the viewport edge while the canvas drew a
+  // single unwrapped line, so what was typed and what was committed differed.
+  assert.match(overlay, /function wrapTextLines/, 'canvas must wrap text');
+  assert.match(overlay, /function drawWrappedText/);
+  assert.match(overlay, /input\.dataset\.maxWidth = String\(maxWidth\)/, 'wrap width must be stored on the editor');
+  // Shorthand property in the annotation literal.
+  assert.match(overlay, /const maxWidth = Number\(textInput\.dataset\.maxWidth\) \|\| 0/, 'the annotation must read it back');
+  const grow = overlay.slice(overlay.indexOf('const grow = () => {'));
+  const body = grow.slice(0, grow.indexOf('\n    };'));
+  assert.match(body, /Math\.min\(inner, measured\)/, 'the box grows with the text up to the limit');
+});
+
+test('canvas wrapping matches the editor width', () => {
+  const block = overlay.slice(overlay.indexOf("case 'text':"));
+  const line = block.slice(0, block.indexOf('break;'));
+  assert.match(line, /drawWrappedText\(/, 'canvas must use the wrapped draw');
+  assert.match(line, /item\.maxWidth/, 'canvas must use the stored wrap width');
+});
+
+test('wrapping breaks CJK per character and Latin at spaces', () => {
+  const fn = overlay.slice(overlay.indexOf('function wrapTextLines'));
+  const body = fn.slice(0, fn.indexOf('\n  /** Draw text'));
+  assert.match(body, /for \(const char of paragraph\)/, 'must iterate characters for CJK');
+  assert.match(body, /lastIndexOf\(' '\)/, 'must prefer spaces for Latin runs');
+});
+
+test('a narrow selection still gets a usable wrap width', () => {
+  const fn = overlay.slice(overlay.indexOf('const wrapWidth = () => {'));
+  const body = fn.slice(0, fn.indexOf('\n    };'));
+  assert.match(body, /MIN_WRAP\s*=\s*120/, 'very narrow selections must not wrap every character');
 });
 
 test('annotation font sizes start small and default to 16', () => {
@@ -400,6 +433,53 @@ test('the language switch itself is not translated', async () => {
     const html = await read(page);
     assert.match(html, /data-no-i18n/, `${page} must protect the language switch`);
   }
+});
+
+/* ------------------------------------------------------ analysis rules i18n */
+
+test('default rules exist in both languages', async () => {
+  const rules = await read('src/rules.js');
+  assert.match(rules, /zh:\s*'请用简体中文分析截图/, 'Chinese default rules are required');
+  assert.match(rules, /en:\s*'Analyze the screenshot/, 'English default rules are required');
+});
+
+test('the rule language defaults to the interface language', async () => {
+  const options = await read('ui/options.js');
+  assert.match(options, /rulesLanguage = stored === 'en' \|\| stored === 'zh' \? stored : shotThinkLang/,
+    'an unset rule language must follow the interface language');
+});
+
+test('the options page offers a rule language switch', async () => {
+  const html = await read('ui/options.html');
+  assert.match(html, /data-rules-lang="zh"/, 'needs a Chinese rule option');
+  assert.match(html, /data-rules-lang="en"/, 'needs an English rule option');
+  assert.match(html, /id="resetRules"/, 'needs a reset-to-default button');
+});
+
+test('switching rule language preserves user-edited rules', async () => {
+  const options = await read('ui/options.js');
+  const block = options.slice(options.indexOf("$('rulesLangSeg').addEventListener"));
+  const body = block.slice(0, block.indexOf("\n$('resetRules')"));
+  assert.match(body, /shotThinkIsDefaultRules/, 'must detect whether the body is still a default');
+  assert.match(body, /已保留你修改过的规则/, 'must tell the user their text was kept');
+});
+
+test('interface language change only updates default rules', async () => {
+  const options = await read('ui/options.js');
+  const block = options.slice(options.indexOf("document.addEventListener('shotthink:language'"));
+  const body = block.slice(0, block.indexOf('\n});') + 4);
+  assert.match(body, /if \(!shotThinkIsDefaultRules\(\$\('rules'\)\.value\)\) return/,
+    'an edited rule body must not be overwritten');
+});
+
+test('an empty rule box shows the default rather than staying blank', async () => {
+  const options = await read('ui/options.js');
+  assert.match(options, /\$\('rules'\)\.value = rules\.trim\(\) \? rules : shotThinkDefaultRulesFor\(rulesLanguage\)/);
+});
+
+test('capture rules resolve through the language-aware default', async () => {
+  assert.match(background, /shotThinkDefaultRulesFor\(shotThinkLang\)/,
+    'background must pick the default in the current interface language');
 });
 
 /* ---------------------------------------------------------------- report */

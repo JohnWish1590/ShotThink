@@ -43,19 +43,70 @@ $('scaleSeg').addEventListener('click', async event => {
 
 /* ------------------------------------------------------------------ rules */
 
+/**
+ * Rule language is independent of the interface language.
+ *
+ * The interface language decides the default, but a user writing English
+ * instructions in a Chinese UI should be able to keep them. So the choice is
+ * stored separately as `rulesLanguage`, and an explicitly edited rule body is
+ * never overwritten by an interface-language change.
+ */
+let rulesLanguage = 'zh';
+
+function paintRulesLanguage(lang) {
+  for (const button of $('rulesLangSeg').querySelectorAll('[data-rules-lang]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.rulesLang === lang));
+  }
+}
+
 async function loadRules() {
-  const { rules = '' } = await chrome.storage.local.get('rules');
-  $('rules').value = rules;
+  const { rules = '', rulesLanguage: stored } = await chrome.storage.local.get(['rules', 'rulesLanguage']);
+  rulesLanguage = stored === 'en' || stored === 'zh' ? stored : shotThinkLang;
+  paintRulesLanguage(rulesLanguage);
+
+  // An empty box means "no choice made yet": show the default for the rule
+  // language instead of leaving the field blank.
+  $('rules').value = rules.trim() ? rules : shotThinkDefaultRulesFor(rulesLanguage);
 }
 
 async function saveRules() {
-  const rules = $('rules').value.trim();
-  await chrome.storage.local.set({ rules });
+  const rules = $('rules').value.trim() || shotThinkDefaultRulesFor(rulesLanguage);
+  await chrome.storage.local.set({ rules, rulesLanguage });
   $('rulesStatus').textContent = shotThinkText('已保存。');
   setTimeout(() => { $('rulesStatus').textContent = ''; }, 1600);
 }
 
 $('save').addEventListener('click', () => void saveRules());
+
+$('rulesLangSeg').addEventListener('click', async event => {
+  const button = event.target.closest('[data-rules-lang]');
+  if (!button) return;
+  const next = button.dataset.rulesLang;
+  if (next === rulesLanguage) return;
+
+  const wasDefault = shotThinkIsDefaultRules($('rules').value);
+  rulesLanguage = next;
+  paintRulesLanguage(next);
+
+  // Only replace the body when the user has not written their own rules.
+  if (wasDefault) {
+    $('rules').value = shotThinkDefaultRulesFor(next);
+    await chrome.storage.local.set({ rules: $('rules').value, rulesLanguage: next });
+    $('rulesStatus').textContent = shotThinkText('已保存。');
+  } else {
+    // Keep the text, but remember the language choice for future defaults.
+    await chrome.storage.local.set({ rulesLanguage: next });
+    $('rulesStatus').textContent = shotThinkText('规则语言已切换；已保留你修改过的规则。');
+  }
+  setTimeout(() => { $('rulesStatus').textContent = ''; }, 2400);
+});
+
+$('resetRules').addEventListener('click', async () => {
+  $('rules').value = shotThinkDefaultRulesFor(rulesLanguage);
+  await chrome.storage.local.set({ rules: $('rules').value, rulesLanguage });
+  $('rulesStatus').textContent = shotThinkText('已恢复默认规则。');
+  setTimeout(() => { $('rulesStatus').textContent = ''; }, 1600);
+});
 
 /* ----------------------------------------------------------------- history */
 
@@ -199,8 +250,19 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && (changes.jobs || changes.queuePaused)) void render();
 });
 
-// Re-render on language change so dynamically built rows follow.
-document.addEventListener('shotthink:language', () => void render());
+// Re-render on language change so dynamically built rows follow, and keep the
+// rule body in step when it is still one of the built-in defaults.
+document.addEventListener('shotthink:language', async event => {
+  void render();
+  if (!shotThinkIsDefaultRules($('rules').value)) return;
+  const lang = event.detail;
+  rulesLanguage = lang;
+  paintRulesLanguage(lang);
+  $('rules').value = shotThinkDefaultRulesFor(lang);
+  await chrome.storage.local.set({ rules: $('rules').value, rulesLanguage: lang });
+  $('rulesStatus').textContent = shotThinkText('规则已随界面语言更新。');
+  setTimeout(() => { $('rulesStatus').textContent = ''; }, 2000);
+});
 
 /* ------------------------------------------------------------------- boot */
 
