@@ -89,7 +89,8 @@
     longCapture: false,
     busy: false,
     windowId: null,
-    toolbarScale: DEFAULT_BUTTON_PX
+    toolbarScale: DEFAULT_BUTTON_PX,
+    lastPointer: null
   };
 
   let root = null;
@@ -229,18 +230,22 @@
       }
       .st-swatch[data-active="1"] { outline: 2px solid #fff; outline-offset: 1px; }
 
-      /* Inline text entry: plain, transparent, no frame.
-         The point is to look like ordinary on-canvas text while typing, so the
-         only visual affordance is a thin caret and a faint outline. A boxed
-         style was tried and rejected: it hid the surrounding content and read
-         as a dialog rather than an annotation. */
+      /* Inline text entry.
+         A faint frame is required, not decoration: on a white page the caret is
+         invisible without one, so the user cannot tell where typing will land.
+         The frame is deliberately thin and translucent so it locates the caret
+         without covering the content underneath, which is what the heavier
+         white-on-dark box in 0.4.0 got wrong. Two rings make it work on both
+         light and dark backgrounds: the blue border shows on light content, the
+         dark outer ring shows on dark content. */
       .st-input {
         position: fixed; min-width: 24px;
-        background: transparent;
-        border: none;
+        background: rgba(127, 127, 127, 0.10);
+        border: 1px solid rgba(41, 151, 255, 0.9);
+        border-radius: 2px;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28);
         outline: none;
-        box-shadow: none;
-        padding: 0; margin: 0;
+        padding: 1px 3px; margin: 0;
         resize: none;
         font-weight: bold; font-family: "Microsoft YaHei", -apple-system, sans-serif;
         /* line-height 1 exactly matches the canvas line box, so the glyphs sit
@@ -862,6 +867,11 @@
     if (!canvas || state.busy) return;
     const point = pointFrom(event);
 
+    // Track the cursor at all times. The text tool opens its editor where the
+    // pointer last was, so the box appears under the mouse rather than at a
+    // fixed centre the user has to hunt for.
+    state.lastPointer = point;
+
     if (state.drafting) {
       state.drafting.end = point;
       state.drafting.rect = normalizeRect(state.drafting.start, point);
@@ -923,10 +933,49 @@
   function openTextEditorAtDefaultPoint() {
     const sel = state.selection;
     const viewport = state.frame?.viewport || { width: window.innerWidth, height: window.innerHeight };
-    const point = sel
-      ? { x: sel.x + sel.w / 2, y: sel.y + sel.h / 2 }
-      : { x: viewport.width / 2, y: viewport.height / 2 };
+
+    // Prefer where the mouse actually is: the user just clicked the T button, so
+    // the pointer is still near the spot they want to annotate. Fall back to the
+    // selection centre, then the viewport centre.
+    let point = state.lastPointer
+      ? { ...state.lastPointer }
+      : sel
+        ? { x: sel.x + sel.w / 2, y: sel.y + sel.h / 2 }
+        : { x: viewport.width / 2, y: viewport.height / 2 };
+
+    // The pointer is usually over the toolbar when this runs, because that is
+    // what was just clicked. Drop the editor into the selection instead so it
+    // does not open on top of the buttons.
+    if (sel && !pointInRect(point, sel)) {
+      point = { x: sel.x + sel.w / 2, y: sel.y + sel.h / 2 };
+    }
+    // Never let it open under the toolbar or the colour panel.
+    if (overlapsPanel(point)) {
+      point = sel
+        ? { x: sel.x + sel.w / 2, y: sel.y + sel.h / 2 }
+        : { x: viewport.width / 2, y: viewport.height / 2 };
+    }
+    // Keep the anchor inside the visible area so the box is not clipped.
+    point.x = Math.max(8, Math.min(point.x, viewport.width - 8));
+    point.y = Math.max(8, Math.min(point.y, viewport.height - 8));
+
     startTextInput(point);
+  }
+
+  function pointInRect(point, rect) {
+    return point.x >= rect.x && point.x <= rect.x + rect.w &&
+           point.y >= rect.y && point.y <= rect.y + rect.h;
+  }
+
+  /** True when a point falls on the toolbar or the colour panel. */
+  function overlapsPanel(point) {
+    for (const panel of [toolbar, colorsPanel]) {
+      if (!panel || panel.hidden) continue;
+      const box = panel.getBoundingClientRect();
+      if (point.x >= box.left && point.x <= box.right &&
+          point.y >= box.top && point.y <= box.bottom) return true;
+    }
+    return false;
   }
 
   function undo() {

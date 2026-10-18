@@ -4,6 +4,28 @@ All notable changes to ShotThink. The version here must match
 `manifest.json`; Chrome only reloads an unpacked extension's code when that
 number changes, so every user-visible fix bumps it.
 
+## [0.6.0] - 2026-10-18
+
+### Fixed
+
+- **The editor opened at a fixed centre, not where the mouse was.** The pointer
+position is now tracked on every move, so choosing the text tool opens the
+editor at the spot the user is pointing at. Falls back to the selection centre,
+then the viewport centre.
+- **The editor was invisible on a white page.** Removing the frame in 0.5.0 went
+too far: with no border and no fill, the caret could not be found on light
+content. The editor now has a thin blue border plus a dark outer ring, so it
+reads on both light and dark backgrounds, with a very faint fill (10% grey) to
+locate the caret without covering the content underneath.
+
+### Notes
+
+- The editor is kept off the toolbar and the colour panel, and clamped inside
+the viewport, so it never opens on top of the buttons or gets clipped.
+- This is a deliberate middle ground between 0.4.0's opaque dark box (which
+covered the page) and 0.5.0's fully transparent editor (which had no visible
+caret).
+
 ## [0.5.0] - 2026-10-18
 
 ### Fixed

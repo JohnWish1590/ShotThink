@@ -194,18 +194,43 @@ test('the editor is centred on the click point, not cornered there', () => {
   assert.match(overlay, /point\.y - height \/ 2/, 'the box must be centred vertically');
 });
 
+test('the editor opens where the mouse is', () => {
+  // Opening at a fixed centre made the user hunt for the caret.
+  assert.match(overlay, /state\.lastPointer = point/, 'pointer position must be tracked');
+  const open = overlay.slice(overlay.indexOf('function openTextEditorAtDefaultPoint'));
+  const body = open.slice(0, open.indexOf('\n  function pointInRect'));
+  assert.match(body, /state\.lastPointer/, 'must prefer the pointer position');
+});
+
+test('the editor is kept off the toolbar and inside the viewport', () => {
+  const open = overlay.slice(overlay.indexOf('function openTextEditorAtDefaultPoint'));
+  const body = open.slice(0, open.indexOf('\n  function pointInRect'));
+  assert.match(body, /overlapsPanel\(point\)/, 'must not open under the toolbar');
+  assert.match(body, /Math\.max\(8, Math\.min\(point\.x/, 'must stay inside the viewport');
+});
+
 test('the editor is focused as soon as it opens', () => {
   assert.match(overlay, /input\.focus\(\)/);
 });
 
-test('the editor is transparent with no frame', async () => {
-  // A boxed style was tried and rejected: it hid the surrounding content and
-  // read as a dialog rather than an annotation.
+test('the editor has a visible frame so the caret can be found', () => {
+  // A fully transparent editor was tried and rejected: on a white page the
+  // caret is invisible, so the user cannot tell where typing will land.
   const css = overlay.slice(overlay.indexOf('.st-input {'));
   const block = css.slice(0, css.indexOf('}'));
-  assert.match(block, /background:\s*transparent/, 'must have no fill');
-  assert.match(block, /border:\s*none/, 'must have no frame');
-  assert.match(block, /box-shadow:\s*none/, 'must have no shadow');
+  assert.match(block, /border:\s*1px solid rgba\(41,\s*151,\s*255/, 'needs a visible border');
+  assert.match(block, /box-shadow:/, 'needs an outer ring for dark backgrounds');
+  assert.ok(!/background:\s*transparent/.test(block), 'a faint fill is required');
+});
+
+test('the editor frame does not hide the content underneath', () => {
+  // 0.4.0 used an opaque dark fill, which covered the page content. The fill
+  // must stay translucent.
+  const css = overlay.slice(overlay.indexOf('.st-input {'));
+  const block = css.slice(0, css.indexOf('}'));
+  const fill = block.match(/background:\s*rgba\([^)]*,\s*([\d.]+)\)/);
+  assert.ok(fill, 'fill must be an rgba value');
+  assert.ok(Number(fill[1]) <= 0.2, `fill alpha must stay low, saw ${fill[1]}`);
 });
 
 test('the editor centres its text both ways', async () => {
