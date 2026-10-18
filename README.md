@@ -105,6 +105,8 @@ options**, or by right-clicking the toolbar icon.
 - **Analysis instructions** — the text attached to every capture. Available in
   both languages, switchable independently of the interface language. Once you
   edit them, a language switch will not overwrite your text.
+- **Capture shortcut** — shows the binding in effect, with a button that opens
+  Chrome's shortcut settings.
 - **Toolbar size** — 22 / 26 / 31 px.
 - **Send history** — status of every capture, with a link to its conversation.
 
@@ -173,7 +175,6 @@ messaging bridge.
 
 Design notes, risks, and milestones: [docs/DESIGN.md](docs/DESIGN.md).
 What was deliberately dropped versus the desktop tool: [docs/SCOPE.md](docs/SCOPE.md).
-**[简体中文说明](docs/README.zh.md)**
 
 ## Development
 
@@ -212,8 +213,3 @@ unpacked extension's code when that number changes. Version numbers follow
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
----
-
-Sibling project: [ClipThink](https://github.com/JohnWish1590/clipthink) thinks
-about what you copy. ShotThink thinks about what you see.
