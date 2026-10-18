@@ -331,15 +331,23 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     if (message.type === 'captureFrame' && sender.tab?.id) {
       const windowId = message.windowId ?? sender.tab.windowId;
       const frame = await captureFrameForOverlay(sender.tab.id, windowId);
-      const { uiLanguage = '', toolbarScale = 28 } = await chrome.storage.local.get([
-        'uiLanguage', 'toolbarScale'
+      const {
+        uiLanguage = '', toolbarScale = 22, annotateColor = '', annotateFontSize = 16
+      } = await chrome.storage.local.get([
+        'uiLanguage', 'toolbarScale', 'annotateColor', 'annotateFontSize'
       ]);
       return {
         ok: true,
         ...frame,
         prefs: {
           language: uiLanguage === 'en' || uiLanguage === 'zh' ? uiLanguage : shotThinkLang,
-          toolbarScale
+          toolbarScale,
+          // The annotation colour and size are remembered between captures, so
+          // the user does not re-pick them every time.
+          annotateColor: typeof annotateColor === 'string' && /^#[0-9a-f]{6}$/i.test(annotateColor)
+            ? annotateColor
+            : '',
+          annotateFontSize: Number(annotateFontSize) || 16
         }
       };
     }
@@ -652,6 +660,17 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         jobs.splice(0, jobs.length, ...kept);
       });
       await deleteImages(doomed).catch(() => {});
+      return { ok: true };
+    }
+
+    if (message.type === 'saveAnnotatePrefs' && sender.tab?.id) {
+      const patch = {};
+      if (typeof message.color === 'string' && /^#[0-9a-f]{6}$/i.test(message.color)) {
+        patch.annotateColor = message.color;
+      }
+      const size = Number(message.fontSize);
+      if ([12, 16, 20, 24, 32, 40, 48].includes(size)) patch.annotateFontSize = size;
+      if (Object.keys(patch).length) await chrome.storage.local.set(patch);
       return { ok: true };
     }
 

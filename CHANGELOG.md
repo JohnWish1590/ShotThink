@@ -4,6 +4,39 @@ All notable changes to ShotThink. The version here must match
 `manifest.json`; Chrome only reloads an unpacked extension's code when that
 number changes, so every user-visible fix bumps it.
 
+## [0.4.0] - 2026-10-18
+
+### Fixed
+
+- **The text colour in the editor did not match what got committed.** Two bugs
+combined: clicking a swatch updated `state.color` but never touched the open
+`<textarea>`, and `commitTextInput` then read `state.color` instead of what the
+box displayed. So the editor showed red, and changing to blue before pressing
+Enter saved blue. The editor now owns its colour: swatches push it onto the
+element and the commit reads it back from `dataset.color`.
+- **The first click with the text tool did nothing.** Opening the editor required
+three conditions — a selection, the text tool active, and then a click inside
+the selection. Now the text tool works before any region exists: pick T, click,
+type.
+- **Characters rendered with gaps between them.** `white-space: pre` preserved
+the soft-wrap breaks a textarea inserts. Changed to `pre-wrap`, and the box is
+measured with the same font the canvas uses.
+
+### Changed
+
+- **Text editor restyled to WeChat's pattern:** white frame, dark translucent
+fill, annotation colour as the text colour. The dark fill is what makes it
+readable over both white and black page content; the white frame carries the
+identity; the coloured text shows exactly what will be committed.
+- **Toolbar default is now 22px** (was 31). Options are 22 / 26 / 31. Live
+feedback across three rounds: 31 read as oversized, 26 was still large, 22 puts
+the icon near body-text height. Icons remain 52% of the button (11px at 22px).
+- **Annotation font sizes** are now `[12, 16, 20, 24, 32, 40, 48]` with 16px as
+the default, matching ordinary body text. Mouse4's 24 was sized for a desktop
+tool.
+- **Colour and font size are remembered** between captures (`annotateColor`,
+`annotateFontSize`), with black as the first-run colour.
+
 ## [0.3.0] - 2026-10-18
 
 ### Added

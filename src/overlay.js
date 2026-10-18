@@ -28,15 +28,20 @@
 
   const ACCENT = '#2997FF';
   const PALETTE = ['#FF3B30', '#FFCC00', '#34C759', '#2997FF', '#00FFFF', '#FF2D95', '#FFFFFF', '#000000'];
-  const FONT_SIZES = [12, 16, 20, 24, 32, 40, 48, 64, 80, 96];
+  /* Annotation font sizes. 16px is the default because it matches ordinary
+     body text; Mouse4's 24 was sized for a desktop tool, not for marking up a
+     web page. */
+  const FONT_SIZES = [12, 16, 20, 24, 32, 40, 48];
+  const DEFAULT_FONT_SIZE = 16;
   const MASK = 'rgba(0,0,0,0.45)';
   const MIN_SELECTION = 10;
   const DOUBLE_CLICK_MS = 320;
 
-  /* Mouse4's adapt_to_screen produces a 31px button; that is the 1.0 baseline.
-     Users found 31px large, so the stored setting can ask for 26 or 28. */
-  const BASE_BUTTON_PX = 31;
-  const DEFAULT_BUTTON_PX = 28;
+  /* Button edge length in CSS pixels. 22 was chosen after live feedback: 31
+     (Mouse4's adapt_to_screen result) read as oversized, 26 was still large.
+     22 keeps the icon near body-text height. */
+  const BASE_BUTTON_PX = 22;
+  const DEFAULT_BUTTON_PX = 22;
 
   /* i18n.js is injected first, but the overlay must never hard-fail if a stale
      tab still has an older build cached. Fall back to the raw string. */
@@ -73,8 +78,8 @@
     annotations: [],
     drafting: null,
     mode: null,
-    color: PALETTE[0],
-    fontSize: 24,
+    color: PALETTE[PALETTE.length - 1], // black first run, then remembered
+    fontSize: DEFAULT_FONT_SIZE,
     selection: null,
     selecting: false,
     anchor: null,
@@ -224,16 +229,28 @@
       }
       .st-swatch[data-active="1"] { outline: 2px solid #fff; outline-offset: 1px; }
 
-      /* Inline text entry: Mouse4 OverlayInput */
+      /* Inline text entry, styled after WeChat's screenshot tool: a white
+         frame on a dark translucent fill with the annotation colour as the text
+         colour. The dark fill is what makes it readable over both white and
+         black page content, and the outer shadow keeps the white frame visible
+         on a white background. */
       .st-input {
-        position: fixed; min-width: 60px;
-        background: rgba(255,255,255,0.06);
-        border: 2px solid #fff; border-radius: 4px;
-        padding: 1px 4px; outline: none; resize: none;
-        font-weight: bold; font-family: "Microsoft YaHei", sans-serif;
-        line-height: 1.25; overflow: hidden; white-space: pre;
+        position: fixed; min-width: 40px;
+        background: rgba(0, 0, 0, 0.72);
+        border: 2px solid #ffffff;
+        border-radius: 3px;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.35);
+        padding: 2px 5px; outline: none; resize: none;
+        font-weight: bold; font-family: "Microsoft YaHei", -apple-system, sans-serif;
+        line-height: 1.3;
+        overflow: hidden;
+        /* pre-wrap, not pre: the pre value preserves the soft-wrap breaks a
+           textarea inserts, which is what produced spaces between characters. */
+        white-space: pre-wrap;
+        word-break: break-word;
         pointer-events: auto;
       }
+      .st-input::placeholder { color: rgba(255,255,255,0.45); font-weight: normal; }
 
       /* Long-capture progress */
       .st-toast {
@@ -339,7 +356,14 @@
     select.value = String(state.fontSize);
     select.addEventListener('change', () => {
       state.fontSize = Number(select.value);
-      if (textInput) textInput.style.fontSize = `${state.fontSize}px`;
+      if (textInput) {
+        textInput.style.fontSize = `${state.fontSize}px`;
+        // Re-measure: the box has to follow the new glyph width.
+        textInput.dispatchEvent(new Event('input'));
+      }
+      void chrome.runtime
+        .sendMessage({ type: 'saveAnnotatePrefs', fontSize: state.fontSize })
+        .catch(() => {});
     });
     colorsPanel.append(select);
 
@@ -355,10 +379,20 @@
         for (const other of colorsPanel.querySelectorAll('.st-swatch')) {
           other.dataset.active = other.dataset.color === color ? '1' : '0';
         }
+        // Keep an open editor in sync, otherwise the box shows one colour while
+        // the committed annotation records another.
+        if (textInput) applyInputColor(textInput, color);
+        // Remember the choice for the next capture.
+        void chrome.runtime
+          .sendMessage({ type: 'saveAnnotatePrefs', color })
+          .catch(() => {});
       });
       colorsPanel.append(swatch);
     }
-    colorsPanel.querySelector('.st-swatch').dataset.active = '1';
+    const initial = colorsPanel.querySelector(`.st-swatch[data-color="${state.color}"]`)
+      || colorsPanel.querySelector('.st-swatch');
+    initial.dataset.active = '1';
+    if (initial.dataset.color) state.color = initial.dataset.color;
 
     root.append(colorsPanel);
   }
@@ -623,21 +657,32 @@
 
   /* ------------------------------------------------------------- text entry */
 
+  /**
+   * Open the inline text editor at a point.
+   *
+   * The editor owns its colour: it is copied from state.color when it opens and
+   * then updated by the swatches, and commitTextInput reads it back from the
+   * element. Previously the commit read `state.color` instead, so changing the
+   * colour mid-edit saved a different colour from the one on screen.
+   */
   function startTextInput(point) {
     cancelTextInput();
     const input = document.createElement('textarea');
     input.className = 'st-input';
     input.rows = 1;
+    input.spellcheck = false;
     input.style.left = `${point.x}px`;
     input.style.top = `${point.y}px`;
-    input.style.color = state.color;
     input.style.fontSize = `${state.fontSize}px`;
-    input.style.borderColor = state.color;
-    input.spellcheck = false;
+    applyInputColor(input, state.color);
 
     const grow = () => {
-      input.style.width = 'auto';
-      input.style.width = `${Math.max(60, measureTextWidth(input.value, state.fontSize) + 20)}px`;
+      // Measure with the same font the canvas will use, so the box matches the
+      // rendered result. Width is capped to the viewport so long text wraps.
+      const maxWidth = Math.max(80, (state.frame?.viewport.width || 800) - point.x - 16);
+      input.style.width = '0px';
+      const measured = measureTextWidth(input.value || ' ', state.fontSize) + 16;
+      input.style.width = `${Math.min(maxWidth, Math.max(40, measured))}px`;
       input.style.height = 'auto';
       input.style.height = `${input.scrollHeight}px`;
     };
@@ -646,17 +691,27 @@
     input.addEventListener('keydown', event => {
       event.stopPropagation();
       if (event.key === 'Escape') { cancelTextInput(); return; }
+      // Enter commits, Shift+Enter adds a line: the same rule as Mouse4.
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         commitTextInput();
       }
     });
+    // Clicks inside the editor must not reach the canvas, which would commit
+    // the text and start a new selection instead.
     input.addEventListener('pointerdown', event => event.stopPropagation());
 
     root.append(input);
     textInput = input;
     grow();
     input.focus();
+  }
+
+  /** Push a colour onto an open editor, so swatches update it live. */
+  function applyInputColor(input, color) {
+    input.style.color = color;
+    // The frame stays white (WeChat style); the text carries the colour.
+    input.dataset.color = color;
   }
 
   function measureTextWidth(text, size) {
@@ -670,14 +725,19 @@
     const value = textInput.value.trim();
     const left = parseFloat(textInput.style.left) || 0;
     const top = parseFloat(textInput.style.top) || 0;
+    // Read the colour from the element, not from state.color: the user may have
+    // changed it while typing, and the element is the source of truth for what
+    // was on screen.
+    const color = textInput.dataset.color || state.color;
+    const size = parseInt(textInput.style.fontSize, 10) || state.fontSize;
     cancelTextInput();
     if (!value) return;
     state.annotations.push({
       type: 'text',
       text: value,
       start: { x: left, y: top },
-      color: state.color,
-      size: state.fontSize
+      color,
+      size
     });
     draw();
   }
@@ -731,6 +791,15 @@
         path: state.mode === 'pen' ? [point] : undefined
       };
       draw();
+      return;
+    }
+
+    // The text tool must work before a region exists too: the user picks T and
+    // clicks, and expects to type immediately. Requiring a selection first was
+    // the reason the first click appeared to do nothing.
+    if (state.mode === 'text' && !state.selection) {
+      if (textInput) commitTextInput();
+      startTextInput(point);
       return;
     }
 
@@ -1066,9 +1135,14 @@
       }
     }
     const requested = Number(reply.prefs?.toolbarScale);
-    state.toolbarScale = Number.isFinite(requested) && requested >= 20 && requested <= 44
+    state.toolbarScale = Number.isFinite(requested) && requested >= 16 && requested <= 44
       ? requested
       : DEFAULT_BUTTON_PX;
+
+    // Restore the last annotation colour and size, falling back to the defaults.
+    if (reply.prefs?.annotateColor) state.color = reply.prefs.annotateColor;
+    const savedSize = Number(reply.prefs?.annotateFontSize);
+    if (FONT_SIZES.includes(savedSize)) state.fontSize = savedSize;
 
     const response = await fetch(reply.dataUrl);
     const bitmap = await createImageBitmap(await response.blob());

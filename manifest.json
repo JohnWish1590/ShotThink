@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ShotThink",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Capture, annotate, and send a browser screenshot into your own ChatGPT conversation. No local app, no API key.",
   "permissions": [
     "activeTab",

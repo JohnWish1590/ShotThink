@@ -153,14 +153,77 @@ test('the icon keeps Mouse4 proportion of the button', () => {
   assert.ok(Math.abs(ratio - 24 / 46) < 0.01, `icon ratio should be 24/46, saw ${ratio}`);
 });
 
-test('the default toolbar size is the 28px the user asked for', () => {
-  assert.match(overlay, /const DEFAULT_BUTTON_PX = 28/);
+test('the default toolbar size is 22px', () => {
+  // 31 (Mouse4's adapt_to_screen result) read as oversized, then 26 was still
+  // large; 22 puts the icon near body-text height.
+  assert.match(overlay, /const DEFAULT_BUTTON_PX = 22/);
+  assert.match(overlay, /const BASE_BUTTON_PX = 22/);
 });
 
-test('toolbar size options are 26 / 28 / 31', async () => {
+test('toolbar size options are 22 / 26 / 31', async () => {
   const html = await read('ui/options.html');
   const values = [...html.matchAll(/data-scale="(\d+)"/g)].map(m => Number(m[1]));
-  assert.deepEqual(values, [26, 28, 31]);
+  assert.deepEqual(values, [22, 26, 31]);
+});
+
+/* ------------------------------------------------------- text annotation */
+
+test('the text tool opens an editor without requiring a selection', () => {
+  // Regression: the first click did nothing because a selection was required
+  // first, so users had to click twice.
+  assert.match(
+    overlay,
+    /state\.mode === 'text' && !state\.selection/,
+    'the text tool must work before a region exists'
+  );
+});
+
+test('the editor is focused as soon as it opens', () => {
+  assert.match(overlay, /input\.focus\(\)/);
+});
+
+test('the editor uses a white frame on a dark fill', async () => {
+  // WeChat-style: readable over both white and black page content.
+  const css = overlay.slice(overlay.indexOf('.st-input {'));
+  const block = css.slice(0, css.indexOf('}'));
+  assert.match(block, /border:\s*2px solid #ffffff/i, 'frame must be white');
+  assert.match(block, /background:\s*rgba\(0,\s*0,\s*0,\s*0?\.7/, 'fill must be dark translucent');
+});
+
+test('the editor text colour follows the selected swatch', () => {
+  // Regression: the box showed one colour while the commit recorded another.
+  assert.match(overlay, /function applyInputColor/, 'colour must be applied through one path');
+  assert.match(overlay, /if \(textInput\) applyInputColor\(textInput, color\)/,
+    'clicking a swatch must update an open editor');
+});
+
+test('committing reads the colour from the element, not from state', () => {
+  // The element is the source of truth for what the user saw.
+  assert.match(overlay, /textInput\.dataset\.color/);
+});
+
+test('the editor does not preserve soft-wrap whitespace', () => {
+  // `white-space: pre` preserved the breaks a textarea inserts, which rendered
+  // as spaces between characters.
+  const css = overlay.slice(overlay.indexOf('.st-input {'));
+  const block = css.slice(0, css.indexOf('}'));
+  assert.match(block, /white-space:\s*pre-wrap/, 'must be pre-wrap, not pre');
+  assert.ok(!/white-space:\s*pre\s*;/.test(block), 'plain pre must not be used');
+});
+
+test('annotation font sizes start small and default to 16', () => {
+  assert.match(overlay, /const FONT_SIZES = \[12, 16, 20, 24, 32, 40, 48\]/);
+  assert.match(overlay, /const DEFAULT_FONT_SIZE = 16/);
+});
+
+test('the first-run annotation colour is black', () => {
+  assert.match(overlay, /color: PALETTE\[PALETTE\.length - 1\]/);
+});
+
+test('colour and font size are remembered between captures', () => {
+  assert.match(background, /annotateColor/);
+  assert.match(background, /annotateFontSize/);
+  assert.match(overlay, /saveAnnotatePrefs/);
 });
 
 /* --------------------------------------------------------- shortcut bugs */

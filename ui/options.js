@@ -30,7 +30,7 @@ function paintScale(scale) {
 
 async function loadScale() {
   const { toolbarScale } = await chrome.storage.local.get('toolbarScale');
-  paintScale(toolbarScale ?? 28);
+  paintScale(toolbarScale ?? 22);
 }
 
 $('scaleSeg').addEventListener('click', async event => {
