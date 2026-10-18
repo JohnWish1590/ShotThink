@@ -189,6 +189,12 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       const blob = await dataUrlToBlob(dataUrl);
       if (blob.size > 50 * 1024 * 1024) throw Error('截图超过 50 MB，未发送。');
 
+      // Resolve the analysis instructions the same way the text menu does:
+      // saved setting first, then the most recent job, then the default.
+      const rules = typeof message.rules === 'string' && message.rules.trim()
+        ? message.rules.trim()
+        : await textRules();
+
       const { jobs = [] } = await chrome.storage.local.get('jobs');
       const activeJobs = jobs.filter(job => !job.archived);
       if (activeJobs.length >= IMAGE_QUEUE_LIMIT) {
@@ -210,7 +216,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
           stored.push({
             id,
             name: name || 'shotthink.png',
-            rules: message.rules || '',
+            rules,
             status: 'queued',
             created: Date.now(),
             hasImage: true,

@@ -52,18 +52,32 @@ Capture happens **before** the overlay is drawn. The overlay then uses the captu
 | File | Responsibility | Status |
 |---|---|---|
 | `manifest.json` | MV3 manifest, minimal permissions | done |
-| `src/background.js` | queue, daily routing, receipt checks | to port from Mouse4 |
-| `src/sender.js` | upload + insert instructions + submit | to port, unchanged |
-| `src/daily.js` | one chat per day, rename to date | to port, unchanged |
-| `src/i18n.js` | zh/en strings | to port, rebrand |
-| `src/capture.js` | `captureVisibleTab` wrapper, DPR math | done |
+| `src/background.js` | queue, daily routing, receipt checks, capture dispatch | done |
+| `src/sender.js` | upload + insert instructions + submit | done, unchanged from Mouse4 |
+| `src/daily.js` | one chat per day, rename to date | done |
+| `src/i18n.js` | zh/en strings | done |
+| `src/capture.js` | `captureVisibleTab` wrapper, DPR math, long capture, sticky suppression | done |
 | `src/store.js` | IndexedDB image store, migration, orphan pruning | done |
+| `src/overlay.js` | region select, annotation canvas, Mouse4 toolbar, text entry, long capture | done |
 | `tests/store.test.mjs` | storage layer tests | done, 10/10 |
-| `src/overlay.js` | region select + annotation canvas | todo |
-| `src/overlay.css` | overlay and toolbar styling | todo |
-| `src/toolbar.js` | toolbar DOM, inline SVG icons | todo |
-| `src/longcapture.js` | scroll + stitch | todo |
-| `ui/options.html` | settings and send history | todo |
+| `tests/overlay.test.mjs` | geometry and annotation tests | done, 18/18 |
+| `ui/options.html` + `options.js` | settings and send history | done |
+
+### 3.1 UI parity with Mouse4
+
+The overlay UI is a direct port, not a reinterpretation. Copied from
+`Mouse4/ui/theme.py` and `Mouse4/ui/toolbar.py`:
+
+- `APPLE_SVGS` icon paths, inlined as SVG strings
+- the 8-colour palette and `DEFAULT_TEXT_FONT_SIZES`
+- toolbar surface `rgba(24,24,27,0.97)`, radius 17px, 42px buttons, 11px radius
+- result-button colours: undo `#D98585`, long `#7AA2F7`, ok `#68DC8C`, ai `#9BE7B0`, cancel `#9DA9BF`
+- the `show_toolbar` placement order: below → above → inside the top edge
+- colour swatches shown for every tool, the size selector only for text
+- `OverlayInput` becomes an auto-growing `<textarea>` with Enter to commit
+
+One button is omitted: **pin**, because a web page cannot pin a window above
+the desktop. That is a platform limit, not a shortcut.
 
 ## 4. Porting notes
 
@@ -188,10 +202,10 @@ Consequences:
 
 | # | Content | Estimate |
 |---|---|---|
-| M1 | capture + overlay region select + copy/download, no AI | ~350 lines |
-| M2 | full annotation set + toolbar UI | ~700 lines |
-| M3 | wire into ported `background.js`, capture → dated chat | ~150 lines |
-| M4 | long capture: scroll stitch, sticky handling, virtualised detection | ~250 lines |
+| M1 | capture + overlay region select + copy/download, no AI | done |
+| M2 | full annotation set + toolbar UI | done |
+| M3 | wire into ported `background.js`, capture → dated chat | done |
+| M4 | long capture: scroll stitch, sticky handling, virtualised detection | done, virtualised detection remains |
 | M5 | IndexedDB storage, worker keepalive, JPEG output | storage **done**; keepalive and JPEG output remain |
 
 Total roughly 1400 new lines, because ~856 lines of delivery logic carry over.

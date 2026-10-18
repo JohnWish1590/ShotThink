@@ -10,7 +10,13 @@ ShotThink is a Chrome extension that turns a browser screenshot into a question 
 
 ## Status
 
-**Early scaffold.** The repository currently contains the project skeleton, the manifest, and the design notes. The capture overlay, annotation layer, and long-page stitcher are not implemented yet. See [docs/DESIGN.md](docs/DESIGN.md) for the full plan and [docs/SCOPE.md](docs/SCOPE.md) for what is deliberately excluded.
+**M1–M4 implemented, not yet verified in a live browser.** Region capture, the
+full annotation set, the Mouse4-style toolbar, long-page stitching, and the
+send path are all written. What remains is service-worker keepalive, JPEG
+output for oversized captures, and virtualised-list detection.
+
+See [docs/DESIGN.md](docs/DESIGN.md) for the plan and [docs/SCOPE.md](docs/SCOPE.md)
+for what is deliberately excluded.
 
 ## What it will do
 
@@ -58,7 +64,8 @@ Captured images are stored in IndexedDB rather than `chrome.storage.local`. Chro
 ## Tests
 
 ```bash
-node tests/store.test.mjs
+node tests/store.test.mjs     # 10 cases: IndexedDB layer, base64 chunking, migration
+node tests/overlay.test.mjs   # 18 cases: selection, toolbar placement, stitching, mosaic
 ```
 
 ## License
