@@ -270,6 +270,7 @@ function onWorkerStart() {
   void installTextContextMenu();
   void reconcileImageStore();
   void reconcilePendingJobs();
+  void clearStaleNamingWarnings();
 }
 
 /**
@@ -758,6 +759,49 @@ async function reconcileImageStore() {
   } catch (error) {
     console.error('ShotThink could not reconcile the image store', error);
   }
+}
+
+/**
+ * Clear naming warnings that were recorded before the rename logic was fixed.
+ *
+ * The old code reported "date naming unfinished" for conversations that were in
+ * fact named correctly. Those warnings are stored on the job records and would
+ * otherwise sit there forever, since a job is only rewritten on a new send.
+ *
+ * Only the exact stale message is cleared; a genuine naming failure from the
+ * current code is left alone.
+ */
+const STALE_NAMING_WARNINGS = [
+  '截图已发送；日期命名未完成：当前聊天的操作菜单未展开，日期命名未完成。',
+  '截图已发送；日期命名未完成：网页未确认日期标题。'
+];
+
+async function clearStaleNamingWarnings() {
+  const stale = new Set(STALE_NAMING_WARNINGS);
+  const cleaned = await mutate(jobs => {
+    let count = 0;
+    for (const job of jobs) {
+      if (job.warning && stale.has(job.warning)) {
+        job.warning = '';
+        count++;
+      }
+    }
+    return count;
+  });
+  if (cleaned) {
+    // The day records carry the same text, and it is re-read on every nameDaily.
+    const { days = {} } = await chrome.storage.local.get('days');
+    let touched = false;
+    for (const entry of Object.values(days)) {
+      if (entry.warning && stale.has(entry.warning)) {
+        entry.warning = '';
+        touched = true;
+      }
+    }
+    if (touched) await chrome.storage.local.set({ days });
+    console.info(`ShotThink cleared ${cleaned} stale naming warning(s)`);
+  }
+  return cleaned;
 }
 
 async function repairKnownUnsent() {

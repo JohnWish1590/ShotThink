@@ -377,6 +377,17 @@
     if(message.type==='renameDaily') {
       renameDaily(message).then(reply,error=>reply({ok:false,error:error.message}));return true;
     }
+    /*
+     * Read-only title check.
+     *
+     * Used by nameDaily after a reported failure: the rename may have succeeded
+     * before the menu closed or the tab navigated, and reporting "naming failed"
+     * for an already-named chat is worse than reporting nothing.
+     */
+    if(message.type==='verifyTitle') {
+      reply({ok: alreadyNamed(message.title), url: location.href});
+      return;
+    }
     if (message.type !== 'sendScreenshot' && message.type !== 'sendText') return;
     const sendJob = message.type === 'sendText' ? sendText : send;
     sendJob(message.job).then(reply, error => reply({ok: false, error: error.message, submissionAttempted: error.submissionAttempted===true}));

@@ -4,6 +4,28 @@ All notable changes to ShotThink. The version here must match
 `manifest.json`; Chrome only reloads an unpacked extension's code when that
 number changes, so every user-visible fix bumps it.
 
+## [0.9.0] - 2026-10-18
+
+### Fixed
+
+- **Switching the language back did not restore the original text.** Translation
+  overwrote text nodes in place, so English replaced Chinese with no copy kept;
+  switching back left the English strings behind. Every text node and attribute
+  now caches its source on first localisation and always translates from that
+  source, so the switch is a true round trip.
+- **Stale "date naming unfinished" warnings persisted.** The warning came from
+  the rename logic fixed in 0.8.0, but it was already written into the job
+  records and nothing rewrote them. `clearStaleNamingWarnings()` now removes
+  exactly those two old messages on worker start, leaving genuine failures from
+  the current code untouched.
+
+### Added
+
+- `nameDaily` now asks the page whether the title is already correct before
+  recording a failure (`verifyTitle`). A rename can succeed and still report an
+  error if the menu closes or the tab navigates afterwards; saying "naming
+  failed" for a chat that is already named is worse than saying nothing.
+
 ## [0.8.0] - 2026-10-18
 
 ### Fixed

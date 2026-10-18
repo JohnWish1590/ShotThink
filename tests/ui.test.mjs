@@ -577,6 +577,51 @@ test('short words are not used as translation keys', async () => {
   }
 });
 
+/* ------------------------------------------------- language switch round trip */
+
+test('localisation caches the source text so switching back restores it', async () => {
+  // Translation used to overwrite text nodes in place, so switching to English
+  // and back left English behind: the Chinese source was gone.
+  const i18n = await read('src/i18n.js');
+  assert.match(i18n, /shotThinkSourceText = new WeakMap\(\)/, 'text sources must be cached');
+  assert.match(i18n, /shotThinkSourceAttr = new WeakMap\(\)/, 'attribute sources must be cached');
+  const fn = i18n.slice(i18n.indexOf('shotThinkLocalizePage = ()'));
+  const body = fn.slice(0, fn.indexOf('\n};'));
+  assert.match(body, /if \(!shotThinkSourceText\.has\(node\)\) shotThinkSourceText\.set\(node, node\.textContent\)/,
+    'the source must be captured once, before the first translation');
+  assert.match(body, /node\.textContent = shotThinkText\(shotThinkSourceText\.get\(node\)\)/,
+    'every call must translate from the cached source, not from the current text');
+});
+
+test('attributes also translate from their cached source', async () => {
+  const i18n = await read('src/i18n.js');
+  const fn = i18n.slice(i18n.indexOf('shotThinkLocalizePage = ()'));
+  const body = fn.slice(0, fn.indexOf('\n};'));
+  assert.match(body, /for \(const \[attribute, source\] of Object\.entries\(saved\)\)/,
+    'attributes must be restored from the saved map');
+});
+
+/* --------------------------------------------------- stale warning cleanup */
+
+test('stale naming warnings are cleared on worker start', async () => {
+  // Warnings written by the old rename logic would otherwise sit on the job
+  // records forever, since a job is only rewritten on a new send.
+  assert.match(background, /clearStaleNamingWarnings/);
+  assert.match(background, /const STALE_NAMING_WARNINGS/, 'only the exact old messages are cleared');
+  const fn = background.slice(background.indexOf('function onWorkerStart'));
+  assert.match(fn.slice(0, 400), /clearStaleNamingWarnings/, 'must run on start');
+});
+
+test('a reported failure is re-checked against the page', async () => {
+  const daily = await read('src/daily.js');
+  const fn = daily.slice(daily.indexOf('async function nameDaily'));
+  const body = fn.slice(0, fn.indexOf('\n}'));
+  assert.match(body, /verifyTitle/, 'must ask the page before recording a failure');
+  assert.match(body, /failure = ''/, 'a confirmed title must clear the failure');
+  const sender = await read('src/sender.js');
+  assert.match(sender, /message\.type==='verifyTitle'/, 'sender must answer the check');
+});
+
 /* ---------------------------------------------------------------- report */
 
 await Promise.all(pendingTests);

@@ -239,6 +239,27 @@ async function nameDaily(job) {
     failure = error.message;
   }
 
+  // Before recording a failure, ask the page whether the title is already
+  // correct. A rename can succeed and still report an error if the menu closes
+  // or the tab navigates afterwards, and telling the user "naming failed" for a
+  // chat that is already named is worse than saying nothing.
+  if (failure && job.tabId) {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: job.tabId }, files: ['src/sender.js'] });
+      const check = await chrome.tabs.sendMessage(job.tabId, {
+        type: 'verifyTitle',
+        title: job.day,
+        url: job.url
+      });
+      if (check?.ok) {
+        failure = '';
+        result = { ok: true, alreadyNamed: true };
+      }
+    } catch {
+      // The tab is gone, so the failure reason stands.
+    }
+  }
+
   if (!failure || result?.alreadyNamed) {
     entry.named = true;
     entry.warning = '';

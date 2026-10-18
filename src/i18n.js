@@ -255,6 +255,17 @@ globalThis.shotThinkText = text => {
  * Text nodes are translated individually, so a paragraph containing inline
  * markup (a <kbd> shortcut, a <code> path) keeps its structure. Each fragment
  * is matched on its own, which is why partial strings are also in the table. */
+/*
+ * Original text is cached the first time an element is localised.
+ *
+ * Translation used to overwrite text nodes in place, so switching to English
+ * and back left the English strings behind: the Chinese source was gone. Each
+ * node and attribute keeps its source, and every localise call starts from that
+ * source rather than from whatever is currently displayed.
+ */
+const shotThinkSourceText = new WeakMap();
+const shotThinkSourceAttr = new WeakMap();
+
 globalThis.shotThinkLocalizePage = () => {
   document.documentElement.lang = globalThis.shotThinkLang === 'zh' ? 'zh-CN' : 'en';
 
@@ -273,13 +284,24 @@ globalThis.shotThinkLocalizePage = () => {
   while (walker.nextNode()) {
     const node = walker.currentNode;
     if (node.parentElement?.closest('script,textarea,[data-no-i18n]')) continue;
-    node.textContent = shotThinkText(node.textContent);
+    // Capture the source once; afterwards always translate from the source.
+    if (!shotThinkSourceText.has(node)) shotThinkSourceText.set(node, node.textContent);
+    node.textContent = shotThinkText(shotThinkSourceText.get(node));
   }
+
   for (const element of document.querySelectorAll('[aria-label],[title],[placeholder]')) {
     if (element.closest('[data-no-i18n]')) continue;
-    for (const attribute of ['aria-label', 'title', 'placeholder']) {
-      const value = element.getAttribute(attribute);
-      if (value) element.setAttribute(attribute, shotThinkText(value));
+    let saved = shotThinkSourceAttr.get(element);
+    if (!saved) {
+      saved = {};
+      for (const attribute of ['aria-label', 'title', 'placeholder']) {
+        const value = element.getAttribute(attribute);
+        if (value) saved[attribute] = value;
+      }
+      shotThinkSourceAttr.set(element, saved);
+    }
+    for (const [attribute, source] of Object.entries(saved)) {
+      element.setAttribute(attribute, shotThinkText(source));
     }
   }
 };
