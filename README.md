@@ -66,7 +66,26 @@ Captured images are stored in IndexedDB rather than `chrome.storage.local`. Chro
 ```bash
 node tests/store.test.mjs     # 10 cases: IndexedDB layer, base64 chunking, migration
 node tests/overlay.test.mjs   # 18 cases: selection, toolbar placement, stitching, mosaic
+node tests/queue.test.mjs     # 15 cases: settlement, handoff, no-duplicate-retry
 ```
+
+## How it connects to ChatGPT
+
+It does not connect — it drives the page. ShotThink uses the ChatGPT session
+already signed in to your browser, operating the ordinary page controls: pick
+the file input, write the instructions into the editor, click send.
+
+No API key, no OAuth, no cookie access. Requests are issued by the browser with
+the browser's own session.
+
+This is deliberate. The point is that ShotThink costs nothing beyond the
+subscription you already have. An API key would require a platform account and
+per-token billing, and would only reach the models the API exposes.
+
+The trade-off is that delivery depends on ChatGPT's page structure and on a
+background tab staying open. So the design rule throughout is: **when a
+selector is not confirmed, stop and report rather than guess.** A skipped
+screenshot is recoverable; a duplicated one is not.
 
 ## License
 

@@ -61,6 +61,7 @@ Capture happens **before** the overlay is drawn. The overlay then uses the captu
 | `src/overlay.js` | region select, annotation canvas, Mouse4 toolbar, text entry, long capture | done |
 | `tests/store.test.mjs` | storage layer tests | done, 10/10 |
 | `tests/overlay.test.mjs` | geometry and annotation tests | done, 18/18 |
+| `tests/queue.test.mjs` | settlement and handoff tests | done, 15/15 |
 | `ui/options.html` + `options.js` | settings and send history | done |
 
 ### 3.1 UI parity with Mouse4
@@ -162,9 +163,31 @@ Supporting pieces:
 - A failed metadata write deletes the blob it just wrote, so no leak on that path.
 - Tests: `node tests/store.test.mjs` (10 cases, including chunked base64 round-trip and the size arithmetic above).
 
-### P0 — MV3 service worker lifetime
+### P0 — MV3 service worker lifetime (resolved)
 
-`background.js` contains `waitFor(() => !generating(), 150000)` — a 150-second wait inside a service worker, which is killed after ~30 seconds of inactivity. Mouse4 survives this via `repairKnownUnsent` (mark uncertain, never resend), so it surfaces as occasional "needs review" items. Moving long waits into the content script (`sender.js`, which is not killed) is the fix.
+`background.js` contained `waitFor(() => !generating(), 150000)` — a 150-second
+wait reached through `chrome.tabs.sendMessage`. Chrome kills an idle MV3 worker
+after about 30 seconds, and an outstanding `await` does not count as activity,
+so a long ChatGPT answer could take the worker down mid-send. The job then
+stranded as `uncertain`, which is safe but confusing.
+
+Resolution: **the page owns the wait.**
+
+- `sender.js` wraps each send in `report()`, writing the outcome to the worker
+  itself via a `jobResult` message. A content script has no idle lifetime, so a
+  150-second wait is fine there.
+- The worker waits at most `SEND_REPLY_TIMEOUT_MS` (20s). On timeout it records
+  `pendingSince` and stops. The job stays in flight and is not retried.
+- `reconcilePendingJobs()` runs on a 1-minute alarm. It settles a job as
+  `uncertain` only when it is past `PENDING_JOB_TTL_MS` (10 min) **and** its tab
+  no longer exists. A tab that still exists might yet report, so it is left
+  alone.
+- `jobResult` kicks `processQueue()` so the queue continues even though the
+  worker stopped waiting.
+
+The invariant that matters: **a send whose outcome is unknown is never retried
+automatically.** Duplicating a screenshot in the user's chat is worse than
+asking them to check. Tests: `node tests/queue.test.mjs` (15 cases).
 
 ### P1 — capture/overlay ordering
 
@@ -183,6 +206,42 @@ Capture first, then draw the overlay on top of the frozen bitmap. Never the reve
 Many web apps (Notion, Feishu, Gmail) scroll an inner `overflow: auto` element, not `document.scrollingElement`. Resolve the container by walking up from the selected element to the nearest scrollable ancestor. This is new logic, not a port.
 
 ## 6. Distribution
+
+### 6.0 Connection model — decided: no API key, ever
+
+ShotThink talks to ChatGPT the same way Mouse4 does: it drives the ordinary
+web page in the user's own browser, using the session the user already has.
+No OAuth, no API key, no cookie reading, no private endpoint.
+
+This is a **product decision, not a technical shortcut**. The selling point is
+that ShotThink costs the user nothing beyond the ChatGPT subscription they
+already pay for. An API key would invert that: it would require a platform
+account, a credit card, per-token billing, and would only reach the models the
+API exposes. The web page reaches whatever the subscription includes.
+
+Consequences that must be treated as load-bearing, not as nice-to-have:
+
+- **Reliability is the entire value proposition.** Because delivery depends on
+  DOM structure and a background tab, a broken send does not read as "OpenAI
+  changed their page"; it reads as "this extension is broken". Every guard
+  below exists for that reason.
+- **Never silently guess.** When a selector is not confirmed, stop and report.
+  A skipped screenshot is recoverable; a duplicated or mislabelled one is not.
+- **A failed send is not a retry.** The job is marked `uncertain` and the user
+  is asked to check the conversation. Resending is the user's decision.
+- **The store channel is off the table.** Automated submission carries real
+  Terms-of-Service risk, and store review treats "automates a third-party
+  site" harshly. Distribution stays self-hosted / unpacked.
+
+Explicitly rejected alternatives:
+
+| Alternative | Why rejected |
+|---|---|
+| OpenAI API key | Costs the user money, needs billing setup, limited model set. Kills the free-for-subscribers selling point. |
+| ChatGPT internal `/backend-api` | Stable and fast, but clearly violates the Terms of Service. Not acceptable. |
+| Reading session cookies | Unnecessary — the page already carries the session. Also a security liability. |
+
+### 6.1 Store review
 
 Store review splits the product in two:
 
@@ -206,6 +265,6 @@ Consequences:
 | M2 | full annotation set + toolbar UI | done |
 | M3 | wire into ported `background.js`, capture → dated chat | done |
 | M4 | long capture: scroll stitch, sticky handling, virtualised detection | done, virtualised detection remains |
-| M5 | IndexedDB storage, worker keepalive, JPEG output | storage **done**; keepalive and JPEG output remain |
+| M5 | IndexedDB storage, worker keepalive, JPEG output | **done**; JPEG output remains |
 
 Total roughly 1400 new lines, because ~856 lines of delivery logic carry over.

@@ -33,6 +33,22 @@
   }
   const progress = (job, status) => chrome.runtime.sendMessage({type: 'progress', id: job.id, status});
 
+  /*
+   * Long waits must not run inside the service worker.
+   *
+   * Chrome kills an idle MV3 worker after about 30 seconds, and an outstanding
+   * `await chrome.tabs.sendMessage` does not count as activity. The 150-second
+   * wait for a previous answer to finish used to live behind that call, so a
+   * long answer would take the worker down mid-send and strand the job as
+   * "uncertain".
+   *
+   * The content script is not subject to that lifetime, so it owns the wait and
+   * reports the outcome itself. The worker only waits a short, bounded time for
+   * the reply; anything longer is picked up later by the reconciler.
+   */
+  const report = (job, patch) =>
+    chrome.runtime.sendMessage({ type: 'jobResult', id: job.id, ...patch }).catch(() => {});
+
   function checkPage() {
     if (location.origin !== 'https://chatgpt.com') throw Error('需要在 ChatGPT 官方页面登录。');
     if (document.querySelector('iframe[src*="challenges.cloudflare.com"], #challenge-running, #challenge-form')) throw Error('页面正在安全验证，请手动完成后重新测试。');
@@ -162,6 +178,21 @@
   }
 
   async function send(job) {
+    try {
+      const result = await performSend(job);
+      await report(job, { ok: true, url: result.url });
+      return result;
+    } catch (error) {
+      await report(job, {
+        ok: false,
+        error: error.message,
+        submissionAttempted: error.submissionAttempted === true
+      });
+      throw error;
+    }
+  }
+
+  async function performSend(job) {
     await prepareComposer(job);
     const fileInput = await waitFor(() => document.querySelector('input[type="file"]'), 10000, '找不到图片上传控件。');
     await progress(job, 'uploading');
@@ -204,6 +235,21 @@
   }
 
   async function sendText(job) {
+    try {
+      const result = await performSendText(job);
+      await report(job, { ok: true, url: result.url });
+      return result;
+    } catch (error) {
+      await report(job, {
+        ok: false,
+        error: error.message,
+        submissionAttempted: error.submissionAttempted === true
+      });
+      throw error;
+    }
+  }
+
+  async function performSendText(job) {
     await prepareComposer(job);
     await progress(job, 'uploading');
     const inserted=await chrome.runtime.sendMessage({type:'insertPrompt',id:job.id});

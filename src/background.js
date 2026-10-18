@@ -25,6 +25,14 @@ const mutate = fn => {
 
 const isManualJob = job => ['failed', 'uncertain'].includes(job?.status);
 
+/* How long the worker is willing to hold a `tabs.sendMessage` open.
+   The page keeps working after this; the worker just stops waiting. */
+const SEND_REPLY_TIMEOUT_MS = 20_000;
+
+/* A job whose page never reported back is settled as uncertain after this. */
+const PENDING_JOB_TTL_MS = 10 * 60_000;
+const RECONCILE_ALARM = 'shotthink-reconcile';
+
 /* Images live in IndexedDB, not in chrome.storage.local. See src/store.js for
    the measurements behind that decision. The queue keeps only metadata. */
 const IMAGE_QUEUE_LIMIT = 30;
@@ -149,7 +157,73 @@ if (chrome.contextMenus?.onClicked?.addListener) {
 function onWorkerStart() {
   void installTextContextMenu();
   void reconcileImageStore();
+  void reconcilePendingJobs();
 }
+
+/**
+ * Settle jobs that the worker stopped waiting for.
+ *
+ * Two outcomes are possible for an in-flight job:
+ *
+ *   - The page finished and wrote `jobResult`, so the job already moved on.
+ *     Nothing to do.
+ *   - The page died (tab closed, navigation, crash) and never reported. The
+ *     job is stuck in `preparing`/`uploading`/`sending`. Because the send may
+ *     have reached the server, it must become `uncertain`, never `failed`
+ *     with an automatic retry.
+ *
+ * Runs on an alarm so a worker that was killed mid-send is cleaned up even if
+ * the user never reopens the popup or options page.
+ */
+async function reconcilePendingJobs() {
+  try {
+    const { jobs = [] } = await chrome.storage.local.get('jobs');
+    const now = Date.now();
+    const stranded = jobs.filter(job =>
+      !job.archived &&
+      ['preparing', 'uploading', 'sending'].includes(job.status) &&
+      now - (job.pendingSince || job.created || now) > PENDING_JOB_TTL_MS
+    );
+    if (!stranded.length) return 0;
+
+    for (const job of stranded) {
+      // A tab that still exists may yet report; only settle when it is gone.
+      if (job.tabId) {
+        try {
+          await chrome.tabs.get(job.tabId);
+          continue;
+        } catch {
+          // Tab is gone, so nothing will ever report for it.
+        }
+      }
+      await mutate(stored => {
+        const record = stored.find(j => j.id === job.id);
+        if (!record) return;
+        record.status = 'uncertain';
+        record.manual = true;
+        record.submissionAttempted = true;
+        record.error = '发送进程中断，请查看对应标签页；不会自动重发。';
+      });
+      await markDailyUncertain({ ...job, day: job.day || job.captureDate }).catch(() => {});
+    }
+    return stranded.length;
+  } catch (error) {
+    console.error('ShotThink could not reconcile pending jobs', error);
+    return 0;
+  }
+}
+
+if (chrome.alarms?.create) {
+  chrome.alarms.create(RECONCILE_ALARM, { periodInMinutes: 1 });
+}
+if (chrome.alarms?.onAlarm?.addListener) {
+  chrome.alarms.onAlarm.addListener(alarm => {
+    if (alarm.name !== RECONCILE_ALARM) return;
+    void reconcilePendingJobs();
+    void reconcileImageStore();
+  });
+}
+
 if (chrome.runtime.onInstalled?.addListener) chrome.runtime.onInstalled.addListener(onWorkerStart);
 if (chrome.runtime.onStartup?.addListener) chrome.runtime.onStartup.addListener(onWorkerStart);
 onWorkerStart();
@@ -243,6 +317,59 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         const job = jobs.find(j => j.id === message.id && j.tabId === sender.tab.id);
         if (job && ['preparing', 'uploading', 'sending'].includes(message.status)) job.status = message.status;
       });
+      return { ok: true };
+    }
+
+    /*
+     * The content script reports its own outcome.
+     *
+     * It owns the long waits (a previous answer can take minutes) because a
+     * service worker is killed after ~30s idle while a content script is not.
+     * Writing the result here, from the page, is what keeps a long send from
+     * being stranded as "uncertain" when the worker dies mid-await.
+     */
+    if (message.type === 'jobResult' && sender.tab && new URL(sender.url).origin === 'https://chatgpt.com') {
+      const { jobs = [] } = await chrome.storage.local.get('jobs');
+      const job = jobs.find(j => j.id === message.id && j.tabId === sender.tab.id);
+      if (!job) return { ok: true, ignored: true };
+
+      if (message.ok) {
+        try {
+          await saveDailyReceipt(job, message.url);
+        } catch (error) {
+          // Delivery is confirmed; only the day mapping failed. Keep the job.
+          await mutate(stored => {
+            const record = stored.find(j => j.id === job.id);
+            if (record) record.warning = error.message;
+          });
+        }
+        await mutate(stored => {
+          const record = stored.find(j => j.id === job.id);
+          if (!record) return;
+          Object.assign(record, {
+            status: 'sent', manual: false, url: message.url,
+            dataUrl: '', text: '', error: '', completed: Date.now()
+          });
+        });
+        await deleteImage(job.id).catch(() => {});
+        void nameDaily({ ...job, url: message.url }).catch(() => {});
+      } else {
+        const attempted = message.submissionAttempted === true || job.status === 'sending';
+        await mutate(stored => {
+          const record = stored.find(j => j.id === job.id);
+          if (!record) return;
+          record.status = attempted ? 'uncertain' : 'failed';
+          record.manual = true;
+          record.submissionAttempted = attempted;
+          record.error = message.error || '发送结果未知。';
+        });
+        if (attempted) {
+          await markDailyUncertain({ ...job, day: job.day || job.captureDate }).catch(() => {});
+        }
+      }
+      // The worker may have stopped waiting for this job, so nothing else would
+      // move the queue along. Kick it once the outcome is recorded.
+      void processQueue();
       return { ok: true };
     }
 
@@ -558,7 +685,14 @@ async function processQueue() {
         let response;
         try {
           const sendType = job.inputType === 'text' ? 'sendText' : 'sendScreenshot';
-          response = await chrome.tabs.sendMessage(tab.id, { type: sendType, job });
+          // Bounded wait. The content script may legitimately need minutes to
+          // wait out a previous answer, and the worker must not be held that
+          // long. If it does not answer in time, the job stays in flight and
+          // the reconciler settles it from the outcome the page wrote itself.
+          response = await Promise.race([
+            chrome.tabs.sendMessage(tab.id, { type: sendType, job }),
+            new Promise(resolve => setTimeout(() => resolve({ pending: true }), SEND_REPLY_TIMEOUT_MS))
+          ]);
         } catch (channelError) {
           // A navigation can destroy the response channel after submission.
           // Reinject only to inspect the receipt; never repeat the send click.
@@ -573,6 +707,17 @@ async function processQueue() {
             }
           } catch {}
           if (!response) throw channelError;
+        }
+
+        if (response?.pending) {
+          // Still running in the page. Leave the job in flight; jobResult or
+          // the reconciler will finish it. Do not touch the image.
+          job.pendingSince = Date.now();
+          await mutate(stored => {
+            const record = stored.find(j => j.id === job.id);
+            if (record) record.pendingSince = job.pendingSince;
+          });
+          break;
         }
 
         if (!response?.ok) {
