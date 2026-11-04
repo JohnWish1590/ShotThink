@@ -14,6 +14,14 @@ Chrome only reloads an unpacked extension's code when that number changes.
 
 ---
 
+## [1.2.0] - 2026-11-04
+
+### Changed
+
+- Clarified the extension name and description so the main workflow is visible
+  in Chrome, the store listing, and search results.
+- Updated the product page and download links to the 1.2.0 package.
+
 ## [1.1.0] - 2026-10-18
 
 ### Added
