@@ -1,11 +1,11 @@
-# ShotThink
+# ShotThink — Web Screenshot to ChatGPT
 
 **English** · **[简体中文](docs/README.zh.md)**
 
-**Capture. Annotate. Ask.**
+**Capture a webpage. Annotate it. Ask ChatGPT.**
 
-A free Chrome extension that sends a browser screenshot to your own ChatGPT
-conversation. Capture a region, mark it up, and it lands in a dated chat with
+A free Chrome extension for sending a webpage screenshot to your own ChatGPT
+conversation. Capture a region, mark it up, and send it to a dated chat with
 your standing instructions attached.
 
 No desktop app. No API key. No subscription. No per-request billing.
@@ -15,7 +15,7 @@ No desktop app. No API key. No subscription. No per-request billing.
 </p>
 
 <p align="center">
-  <a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip"><b>Download v1.1.0</b></a>
+  <a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.2.0/ShotThink-1.2.0.zip"><b>Download v1.2.0</b></a>
   &nbsp;·&nbsp;
   <a href="docs/demo.mp4">Watch the 32-second demo</a>
   &nbsp;·&nbsp;
@@ -52,10 +52,10 @@ trade-off seriously — see [Safety](#safety) below.
 
 ## Install
 
-The extension is not on the Chrome Web Store — it automates a third-party site,
-which is not a good fit for store review. Install it unpacked:
+Install [ShotThink from the Chrome Web Store](https://chromewebstore.google.com/detail/shotthink/jhfgnoghmgkedofkebeldlholnigmloj).
+For development or offline installation, you can also load the ZIP unpacked:
 
-1. Download [`ShotThink-1.1.0.zip`](https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip) and unzip it.
+1. Download [`ShotThink-1.2.0.zip`](https://github.com/JohnWish1590/ShotThink/releases/download/v1.2.0/ShotThink-1.2.0.zip) and unzip it.
 2. Open `chrome://extensions/` in Chrome (or any Chromium browser).
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked** and select the unzipped folder.
