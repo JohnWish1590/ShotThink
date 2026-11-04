@@ -10,8 +10,8 @@
 
 const I18N = {
   en: {
-    'meta.title': 'ShotThink — Capture, annotate, ask. Free Chrome extension.',
-    'meta.desc': 'A free Chrome extension that sends a browser screenshot to your own ChatGPT conversation. No API key, no subscription, no per-request billing.',
+    'meta.title': 'ShotThink — Web Screenshot to ChatGPT | Free Chrome extension.',
+    'meta.desc': 'Capture a webpage region, annotate screenshots, and send them to your own ChatGPT conversation. Supports long screenshots and selected-text right-click sending. No API key.',
 
     'nav.features': 'Features',
     'nav.install': 'Install',
@@ -21,7 +21,7 @@ const I18N = {
     'nav.lang': '中文',
 
     'hero.h1': 'Capture. Annotate. <em>Ask.</em>',
-    'hero.lead': 'A Chrome extension that sends a browser screenshot straight into your own ChatGPT conversation. Capture a region, mark it up, and it lands in a dated chat with your standing instructions attached.',
+    'hero.lead': 'A Chrome extension for sending a webpage screenshot straight into your own ChatGPT conversation. Capture a region, annotate it, use long screenshots, or send selected text from the right-click menu.',
     'hero.cta': 'Download for Chrome',
     'hero.source': 'View source',
     'hero.note': '<strong>Free.</strong> No API key, no subscription, no per-request billing. MIT licensed.',
@@ -48,7 +48,7 @@ const I18N = {
     'f6.p': 'Right-click any selected text → Send to AI. No clipboard reading, no global keyboard hooks.',
 
     'install.h2': 'Install',
-    'install.sub': 'ShotThink is not on the Chrome Web Store — it automates a third-party site, which is a poor fit for store review. Installing it takes about a minute.',
+    'install.sub': 'ShotThink is available on the Chrome Web Store. It automates the ChatGPT page you already use, so it needs an existing ChatGPT sign-in.',
     'i1.h': 'Download and unzip',
     'i1.p': 'into a folder you will keep.',
     'i2.h': 'Open <code>chrome://extensions/</code>',
@@ -94,7 +94,7 @@ const I18N = {
 
     'get.h2': 'Get it',
     'get.sub': 'Free, MIT licensed, and about 80 KB.',
-    'get.download': 'Download v1.0.0',
+    'get.download': 'Download v1.2.0',
     'get.source': 'Source on GitHub',
     'get.changelog': 'Changelog',
 
@@ -103,8 +103,8 @@ const I18N = {
   },
 
   zh: {
-    'meta.title': 'ShotThink — 截图，然后思考。免费 Chrome 插件',
-    'meta.desc': '免费的 Chrome 插件：框选网页内容，标注后发送到你自己已登录的 ChatGPT 对话。不需要 API Key，不需要额外订阅，不按次计费。',
+    'meta.title': 'ShotThink：网页截图问 ChatGPT | 免费 Chrome 插件',
+    'meta.desc': '免费的 Chrome 插件：框选网页内容、添加标注并发送到你自己已登录的 ChatGPT 对话。支持长截图和右键发送选中文字，不需要 API Key。',
 
     'nav.features': '功能',
     'nav.install': '安装',
@@ -114,7 +114,7 @@ const I18N = {
     'nav.lang': 'EN',
 
     'hero.h1': '截图。标注。<em>提问。</em>',
-    'hero.lead': '一个 Chrome 插件：框选网页内容，直接发送到你自己已登录的 ChatGPT 对话。标注完，图片连同你的固定分析规则一起进入当天的对话。',
+    'hero.lead': '一个 Chrome 插件：框选网页内容、添加标注，然后直接发送到你自己已登录的 ChatGPT 对话。支持长截图，也可以右键发送选中的文字。',
     'hero.cta': '下载 Chrome 版',
     'hero.source': '查看源码',
     'hero.note': '<strong>免费。</strong>不需要 API Key，不需要订阅，不按次计费。MIT 许可。',
@@ -141,7 +141,7 @@ const I18N = {
     'f6.p': '右键任意选中文字 → 发送到AI。不读取剪贴板，不监听全局键盘。',
 
     'install.h2': '安装',
-    'install.sub': 'ShotThink 没有上架 Chrome 商店——它会自动操作第三方网站，不适合走商店审核。安装大约一分钟。',
+    'install.sub': 'ShotThink 已上架 Chrome 商店。它操作的是你已经登录的 ChatGPT 网页，因此需要先登录 ChatGPT。',
     'i1.h': '下载并解压',
     'i1.p': '到一个你会长期保留的文件夹。',
     'i2.h': '打开 <code>chrome://extensions/</code>',
@@ -187,7 +187,7 @@ const I18N = {
 
     'get.h2': '获取',
     'get.sub': '免费，MIT 许可，约 80 KB。',
-    'get.download': '下载 v1.0.0',
+    'get.download': '下载 v1.2.0',
     'get.source': 'GitHub 源码',
     'get.changelog': '更新日志',
 
