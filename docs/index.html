@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ShotThink — Capture, annotate, ask. Free Chrome extension.</title>
-<meta name="description" content="A free Chrome extension that sends a browser screenshot to your own ChatGPT conversation. No API key, no subscription, no per-request billing.">
+<title>ShotThink：网页截图问 ChatGPT | Free Chrome extension</title>
+<meta name="description" content="Capture a webpage region, annotate screenshots, and send them to your own ChatGPT conversation. Supports long screenshots and selected-text right-click sending. No API key.">
 <link rel="canonical" href="https://johnwish1590.github.io/ShotThink/">
 <link rel="icon" href="icons/icon32.png">
 <link rel="apple-touch-icon" href="icons/icon128.png">
 <meta property="og:type" content="website">
-<meta property="og:title" content="ShotThink — Capture, annotate, ask.">
-<meta property="og:description" content="Free Chrome extension. Capture a region, annotate it, send it to your own ChatGPT. No API key, no subscription.">
+<meta property="og:title" content="ShotThink: Web Screenshot to ChatGPT">
+<meta property="og:description" content="Capture a webpage region, annotate it, and send it to your own ChatGPT conversation. Supports long screenshots and selected-text sending.">
 <meta property="og:url" content="https://johnwish1590.github.io/ShotThink/">
 <meta property="og:image" content="https://johnwish1590.github.io/ShotThink/screenshots/06-overlay-annotated.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -18,15 +18,15 @@
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "ShotThink",
+  "name": "ShotThink: Web Screenshot to ChatGPT",
   "applicationCategory": "BrowserApplication",
   "operatingSystem": "Chrome, Edge, Brave, any Chromium browser",
-  "description": "A free Chrome extension that sends a browser screenshot to your own ChatGPT conversation. No API key, no subscription, no per-request billing.",
+  "description": "Capture a webpage region, annotate screenshots, and send them to your own ChatGPT conversation. Supports long screenshots and selected-text right-click sending. No API key.",
   "url": "https://johnwish1590.github.io/ShotThink/",
-  "downloadUrl": "https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip",
+  "downloadUrl": "https://github.com/JohnWish1590/ShotThink/releases/download/v1.2.0/ShotThink-1.2.0.zip",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "license": "https://github.com/JohnWish1590/ShotThink/blob/main/LICENSE",
-  "softwareVersion": "1.1.0"
+  "softwareVersion": "1.2.0"
 }
 </script>
 <style>
@@ -235,7 +235,7 @@
       <a href="#safety" data-i18n="nav.safety">Safety</a>
       <a href="#faq" data-i18n="nav.faq">FAQ</a>
       <a href="#" id="lang-toggle" class="lang-toggle" aria-label="切换到中文">中文</a>
-      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip" data-i18n="nav.download">Download</a>
+      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.2.0/ShotThink-1.2.0.zip" data-i18n="nav.download">Download</a>
     </nav>
   </div>
 </header>
@@ -250,7 +250,7 @@
       chat with your standing instructions attached.
     </p>
     <div class="hero-actions">
-      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip" data-i18n="hero.cta">Download for Chrome</a>
+      <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.2.0/ShotThink-1.2.0.zip" data-i18n="hero.cta">Download for Chrome</a>
       <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink" data-i18n="hero.source">View source</a>
     </div>
     <p class="hero-note" data-i18n="hero.note">
@@ -326,13 +326,13 @@
     <div class="wrap">
       <h2 data-i18n="install.h2">Install</h2>
       <p class="sub" data-i18n="install.sub">
-        ShotThink is not on the Chrome Web Store — it automates a third-party site,
-        which is a poor fit for store review. Installing it takes about a minute.
+        ShotThink is available on the Chrome Web Store. It automates the ChatGPT
+        page you already use, so it needs an existing ChatGPT sign-in.
       </p>
       <ol class="steps">
         <li>
           <strong data-i18n="i1.h">Download and unzip</strong>
-          <span data-i18n="i1.p"><a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip">ShotThink-1.1.0.zip</a>
+          <span data-i18n="i1.p"><a href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.2.0/ShotThink-1.2.0.zip">ShotThink-1.2.0.zip</a>
           into a folder you will keep.</span>
         </li>
         <li>
@@ -442,7 +442,7 @@
       <h2 data-i18n="get.h2">Get it</h2>
       <p class="sub" data-i18n="get.sub">Free, MIT licensed, and about 80 KB.</p>
       <div class="hero-actions">
-        <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.1.0/ShotThink-1.1.0.zip" data-i18n="get.download">Download v1.1.0</a>
+        <a class="btn" href="https://github.com/JohnWish1590/ShotThink/releases/download/v1.2.0/ShotThink-1.2.0.zip" data-i18n="get.download">Download v1.2.0</a>
         <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink" data-i18n="get.source">Source on GitHub</a>
         <a class="btn ghost" href="https://github.com/JohnWish1590/ShotThink/blob/main/CHANGELOG.md" data-i18n="get.changelog">Changelog</a>
       </div>
