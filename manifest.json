@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ShotThink",
-  "version": "1.1.0",
-  "description": "Free Chrome extension: capture a region, annotate it, and send it to your own ChatGPT conversation. No API key, no subscription.",
+  "name": "ShotThink：网页截图问 ChatGPT",
+  "version": "1.2.0",
+  "description": "框选网页内容、圈出重点，一键发到你已登录的 ChatGPT 对话；支持长截图和右键发送选中文字，无需单独配置 API Key ",
   "permissions": [
     "activeTab",
     "scripting",
@@ -25,7 +25,7 @@
   },
   "commands": {
     "capture": {
-      "suggested_key": {
+      "suggeted_key": {
         "default": "Alt+Shift+S",
         "mac": "Alt+Shift+S"
       },
@@ -34,9 +34,9 @@
   },
   "options_page": "ui/options.html",
   "icons": {
-    "16": "icons/icon16.png",
+    "16": "icons/icons16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "28": "icons/icon128.png"
   }
 }
